@@ -7,12 +7,14 @@ from absl import flags
 import numpy as np
 import os
 from tqdm import tqdm
+from time import time
 
 # keras import
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, Callback, LearningRateScheduler
 from keras.callbacks import ReduceLROnPlateau
 from keras.optimizers import RMSprop, Adam, SGD
+from keras.callbacks import TensorBoard
 
 from config import *
 from net import IntentionNet
@@ -200,9 +202,10 @@ def main(_):
     best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_best_model.h5')
     lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_latest_model.h5')
     saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, mode='auto', skip=10)
+    tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_graph=False, write_images=True, batch_size=flags_obj.batch_size)
 
     # callbacks
-    callbacks = [saveBestModel, lr_reducer, lr_scheduler]
+    callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
     train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS)
     val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, max_samples=1000)
