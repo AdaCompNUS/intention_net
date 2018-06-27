@@ -12,6 +12,7 @@ from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
 
+
 class CarlaSimDataset(keras.utils.Sequence):
     # intention mapping
     INTENTION_MAPPING = {}
@@ -79,6 +80,8 @@ class CarlaSimDataset(keras.utils.Sequence):
     def __len__(self):
         """Denote number of batches per epoch"""
         return self.num_samples // self.batch_size
+
+intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 
 def test():
     d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
