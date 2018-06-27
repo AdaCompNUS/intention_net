@@ -180,6 +180,7 @@ def main(_):
 
     if flags_obj.num_gpus > 1:
         # make the model parallel
+        flags_obj.batch_size = flags_obj.batch_size * flags_obj.num_gpus
         model = multi_gpu_model(model, flags_obj.num_gpus)
 
     # print model summary
@@ -208,7 +209,7 @@ def main(_):
     # callbacks
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, shuffle=True)
     val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, max_samples=1000)
 
     optimizer = get_optimizer()
