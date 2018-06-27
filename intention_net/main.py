@@ -1,0 +1,224 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from absl import app as absl_app
+from absl import flags
+import numpy as np
+import os
+from tqdm import tqdm
+
+# keras import
+from keras import backend as K
+from keras.callbacks import ModelCheckpoint, Callback, LearningRateScheduler
+from keras.callbacks import ReduceLROnPlateau
+from keras.optimizers import RMSprop, Adam, SGD
+
+from config import *
+from net import IntentionNet
+from dataset import CarlaSimDataset as Dataset
+from multi_gpu import make_parallel
+
+cfg = None
+flags_obj = None
+
+class MyModelCheckpoint(Callback):
+    """Save the model after every epoch.
+    `filepath` can contain named formatting options,
+    which will be filled the value of `epoch` and
+    keys in `logs` (passed in `on_epoch_end`).
+    For example: if `filepath` is `weights.{epoch:02d}-{val_loss:.2f}.hdf5`,
+    then the model checkpoints will be saved with the epoch number and
+    the validation loss in the filename.
+    # Arguments
+        filepath: string, path to save the model file.
+        monitor: quantity to monitor.
+        verbose: verbosity mode, 0 or 1.
+        save_best_only: if `save_best_only=True`,
+            the latest best model according to
+            the quantity monitored will not be overwritten.
+        mode: one of {auto, min, max}.
+            If `save_best_only=True`, the decision
+            to overwrite the current save file is made
+            based on either the maximization or the
+            minimization of the monitored quantity. For `val_acc`,
+            this should be `max`, for `val_loss` this should
+            be `min`, etc. In `auto` mode, the direction is
+            automatically inferred from the name of the monitored quantity.
+        save_weights_only: if True, then only the model's weights will be
+            saved (`model.save_weights(filepath)`), else the full model
+            is saved (`model.save(filepath)`).
+        period: Interval (number of epochs) between checkpoints.
+    """
+
+    def __init__(self, filepath, bestpath, monitor='val_loss', verbose=0,
+                 save_best_only=False, save_weights_only=False,
+                 mode='auto', period=1, skip=1):
+        super(MyModelCheckpoint, self).__init__()
+        self.monitor = monitor
+        self.verbose = verbose
+        self.filepath = filepath
+        self.bestpath = bestpath
+        self.save_best_only = save_best_only
+        self.save_weights_only = save_weights_only
+        self.period = period
+        self.skip = skip
+        self.skip_count = 0
+        self.epochs_since_last_save = 0
+
+        if mode not in ['auto', 'min', 'max']:
+            warnings.warn('ModelCheckpoint mode %s is unknown, '
+                          'fallback to auto mode.' % (mode),
+                          RuntimeWarning)
+            mode = 'auto'
+
+        if mode == 'min':
+            self.monitor_op = np.less
+            self.best = np.Inf
+        elif mode == 'max':
+            self.monitor_op = np.greater
+            self.best = -np.Inf
+        else:
+            if 'acc' in self.monitor or self.monitor.startswith('fmeasure'):
+                self.monitor_op = np.greater
+                self.best = -np.Inf
+            else:
+                self.monitor_op = np.less
+                self.best = np.Inf
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        self.epochs_since_last_save += 1
+        self.skip_count += 1
+        if flags_obj.num_gpus > 1:
+            # discard multi-gpu layer
+            old_model = self.model.layers[-2]
+        else:
+            old_model = self.model
+
+        if self.epochs_since_last_save >= self.period:
+            self.epochs_since_last_save = 0
+            filepath = self.bestpath
+            if self.save_best_only:
+                current = logs.get(self.monitor)
+                if current is None:
+                    warnings.warn('Can save best model only with %s available, '
+                                  'skipping.' % (self.monitor), RuntimeWarning)
+                else:
+                    if self.monitor_op(current, self.best):
+                        if self.verbose > 0:
+                            print('Epoch %05d: %s improved from %0.5f to %0.5f,'
+                                  ' saving model to %s'
+                                  % (epoch, self.monitor, self.best,
+                                     current, filepath))
+                        self.best = current
+                        if self.save_weights_only:
+                            old_model.save_weights(filepath, overwrite=True)
+                        else:
+                            old_model.save(filepath, overwrite=True)
+                    else:
+                        if self.verbose > 0:
+                            print('Epoch %05d: %s did not improve' %
+                                  (epoch, self.monitor))
+
+        if self.skip_count >= self.skip:
+            self.skip_count = 0
+            filepath = self.filepath
+            if self.verbose > 0:
+                print('Epoch %05d: saving model to %s' % (epoch, filepath))
+            if self.save_weights_only:
+                old_model.save_weights(filepath, overwrite=True)
+            else:
+                old_model.save(filepath, overwrite=True)
+
+def define_intention_net_flags():
+    flags.DEFINE_enum(
+            name='intention_mode', short_name='mode', default="DLM",
+            enum_values=['DLM', 'LPE_SIAMESE', 'LPE_NO_SIAMESE'],
+            help=help_wrap("Intention Net mode to run"))
+
+    global cfg
+    cfg = load_config(IntentionNetConfig)
+
+def lr_schedule(epoch):
+    """
+    Learning rate schedule
+    Learning rate is scheduled to be reduced after 80, 120, 160, 180 epochs.
+        Called automatically every epoch as part of callbacks during training.
+    """
+    lr = flags_obj.learning_rate
+    if epoch > 180:
+        lr *= 5e-2
+    elif epoch > 160:
+        lr *= 3e-2
+    elif epoch > 120:
+        lr *= 1e-2
+    elif epoch > 80:
+        lr *= 1e-1
+    print ('Learning rate: ', lr)
+    return lr
+
+def get_optimizer():
+    if flags_obj.optim == 'rmsprop':
+        optimizer = RMSprop(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY, rho=0.9, epsilon=1e-08)
+        print ('=> use rmsprop optimizer')
+    elif flags_obj.optim == 'sgd':
+        optimizer = SGD(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY, momentum=cfg.MOMENTUM)
+        print ('=> use sgd optimizer')
+    else:
+        optimizer = Adam(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY)
+        print ('=> use adam optimizer')
+    return optimizer
+
+def main(_):
+    global flags_obj
+    flags_obj = flags.FLAGS
+
+    model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
+
+    if flags_obj.num_gpus > 1:
+        model = make_parallel(model, flags_obj.num_gpus)
+
+    # print model summary
+    model.summary()
+
+    # optionally resume from a checkpoint
+    if flags_obj.resume is not None:
+        if os.path.isfile(flags_obj.resume):
+            model.load_weights(flags_obj.resume)
+            print ('=> loaded checkpoint {}'.format(flags_obj.resume))
+        else:
+            print ("=> no checkpoint found at {}".format(flags_obj.resume))
+
+    lr_scheduler = LearningRateScheduler(lr_schedule)
+    lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                                   cooldown=0,
+                                   patience=5,
+                                   min_lr=0.5e-6)
+
+    # save model
+    best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_best_model.h5')
+    lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_latest_model.h5')
+    saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, mode='auto', skip=10)
+
+    # callbacks
+    callbacks = [saveBestModel, lr_reducer, lr_scheduler]
+
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS)
+    val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, max_samples=1000)
+
+    optimizer = get_optimizer()
+
+    model.compile(loss='mse', optimizer=optimizer, metrics=['accuracy', 'mae'])
+
+    model.fit_generator(
+            generator=train_generator,
+            validation_data=val_generator,
+            use_multiprocessing=True,
+            workers=flags_obj.num_workers,
+            callbacks=callbacks,
+            epochs=flags_obj.train_epochs)
+
+if __name__ == '__main__':
+    define_intention_net_flags()
+    absl_app.run(main)
