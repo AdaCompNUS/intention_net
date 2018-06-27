@@ -15,11 +15,11 @@ from keras.callbacks import ModelCheckpoint, Callback, LearningRateScheduler
 from keras.callbacks import ReduceLROnPlateau
 from keras.optimizers import RMSprop, Adam, SGD
 from keras.callbacks import TensorBoard
+from keras.utils.training_utils import multi_gpu_model
 
 from config import *
 from net import IntentionNet
 from dataset import CarlaSimDataset as Dataset
-from multi_gpu import make_parallel
 
 cfg = None
 flags_obj = None
@@ -179,7 +179,8 @@ def main(_):
     model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 
     if flags_obj.num_gpus > 1:
-        model = make_parallel(model, flags_obj.num_gpus)
+        # make the model parallel
+        model = multi_gpu_model(model, flags_obj.num_gpus)
 
     # print model summary
     model.summary()
