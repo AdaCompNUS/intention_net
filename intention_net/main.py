@@ -19,7 +19,8 @@ from keras.utils.training_utils import multi_gpu_model
 
 from config import *
 from net import IntentionNet
-from dataset import CarlaSimDataset as Dataset
+#from dataset import CarlaSimDataset as Dataset
+from dataset import CarlaImageDataset as Dataset
 
 cfg = None
 flags_obj = None
@@ -149,13 +150,13 @@ def lr_schedule(epoch):
         Called automatically every epoch as part of callbacks during training.
     """
     lr = flags_obj.learning_rate
-    if epoch > 180:
+    if epoch > 90:
         lr *= 1e-2
-    elif epoch > 160:
-        lr *= 5e-2
-    elif epoch > 120:
-        lr *= 1e-1
     elif epoch > 80:
+        lr *= 5e-2
+    elif epoch > 60:
+        lr *= 1e-1
+    elif epoch > 30:
         lr *= 5e-1
     print ('Learning rate: ', lr)
     return lr

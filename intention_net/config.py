@@ -110,7 +110,7 @@ class IntentionNetConfig(object):
     model_dir = '/home/gaowei/SegIRLNavNet/agents/intention_net/debug'
     log_dir = '/home/gaowei/SegIRLNavNet/agents/intention_net/log'
     # default params
-    train_epochs=200
+    train_epochs=100
     batch_size=8
 
     # Constants should start from _ in order not to get conflict with flags
