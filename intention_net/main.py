@@ -19,8 +19,6 @@ from keras.utils.training_utils import multi_gpu_model
 
 from config import *
 from net import IntentionNet
-#from dataset import CarlaSimDataset as Dataset
-from dataset import CarlaImageDataset as Dataset
 
 cfg = None
 flags_obj = None
@@ -140,6 +138,11 @@ def define_intention_net_flags():
             enum_values=['DLM', 'LPE_SIAMESE', 'LPE_NO_SIAMESE'],
             help=help_wrap("Intention Net mode to run"))
 
+    flags.DEFINE_enum(
+            name='dataset', short_name='ds', default="CARLA",
+            enum_values=['CARLA_SIM', 'CARLA', 'HUAWEI'],
+            help=help_wrap("dataset to load for training."))
+
     global cfg
     cfg = load_config(IntentionNetConfig)
 
@@ -176,6 +179,16 @@ def get_optimizer():
 def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
+
+    if flags_obj.dataset == 'CARLA':
+        from dataset import CarlaImageDataset as Dataset
+        print ('=> using CARLA published data')
+    elif flags_obj.dataset == 'CARLA_SIM':
+        from dataset import CarlaSimDataset as Dataset
+        print ('=> using self-collected CARLA data')
+    else:
+        print ('=> using HUAWEI data')
+        pass
 
     model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 

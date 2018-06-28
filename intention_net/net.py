@@ -39,6 +39,7 @@ def FeatModel():
     return Model(inputs=inp, outputs=oup)
 
 def IntentionNet(mode, num_control, num_intentions=-1):
+    print ('Intention Mode', mode)
     # Input for intention net
     rgb_input = Input(shape=(224, 224, 3))
 
@@ -65,7 +66,21 @@ def IntentionNet(mode, num_control, num_intentions=-1):
         model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
 
     else:
-        pass
+        if mode == 'LPE_SIAMESE':
+            lpe_input = Input(shape=(224, 224, 3))
+            lpe_feat = feat_model(lpe_input)
+        else:
+            assert (mode == 'LPE_NO_SIAMESE'), "LPE WITHOUT SIAMESE ARCHITECTURE"
+            lpe_input = Input(shape=(224, 224, 3))
+            lpe_feat = FeatModel()(lpe_input)
+        speed_input = Input(shape=(1,))
+        speed_feat = FCModel(1)(speed_input)
+        feat = concatenate([rgb_feat, lpe_feat, speed_feat])
+        out = Dropout(DROPOUT)(feat)
+        out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+        out = Dropout(DROPOUT)(out)
+        control = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
+        model = Model(inputs=[rgb_input, map_input, speed_input], outputs=control)
 
     return model
 
@@ -81,8 +96,8 @@ def test():
     img = np.expand_dims(img, axis=0)
 
     net = IntentionNet('DLM', 2, 4)
-    control = net.predict([img, to_categorical([1], num_classes=4), np.array([[1.]])])
     print (net.summary())
+    control = net.predict([img, to_categorical([1], num_classes=4), np.array([[1.]])])
     print (control)
 
 #test()
