@@ -12,7 +12,6 @@ from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
 
-
 class CarlaSimDataset(keras.utils.Sequence):
     # intention mapping
     INTENTION_MAPPING = {}
@@ -85,12 +84,85 @@ class CarlaSimDataset(keras.utils.Sequence):
         """Denote number of batches per epoch"""
         return self.num_samples // self.batch_size
 
+class CarlaImageDataset(CarlaSimDataset):
+    STEER = 0
+    GAS = 1
+    BRAKE = 2
+    HAND_BRAKE = 3
+    REVERSE_GEAR = 4
+    STEER_NOISE = 5
+    GAS_NOISE = 6
+    BRAKE_NOISE = 7
+    POS_X = 8
+    POS_Y = 9
+    SPEED = 10
+    COLLISION_OTHER = 11
+    COLLISION_PEDESTRIAN = 12
+    COLLISION_CAR = 13
+    OPPOSITE_LANE_INTER = 14
+    SIDEWALK_INTER = 15
+    ACC_X = 16
+    ACC_Y = 17
+    ACC_Z = 18
+    PLATFORM_TIME = 19
+    GAME_TIME = 20
+    ORIENT_X = 21
+    ORIENT_Y = 22
+    ORIENT_Z = 23
+    INTENTION = 24
+    NOISE = 25
+    CAMERA = 26
+    CAMERA_YAW = 27
+
+    def __init__(self, data_dir, batch_size, num_intentions, target_size=(224, 224), shuffle=False, max_samples=None):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.num_intentions = num_intentions
+        self.shuffle = shuffle
+        self.target_size = target_size
+
+        self.labels = np.loadtxt(osp.join(self.data_dir, 'label.txt'))
+        self.num_samples = self.labels.shape[0]
+        if max_samples is not None:
+            self.num_samples = min(max_samples, self.num_samples)
+        self.files = [self.data_dir + '/' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
+        self.labels = self.labels[:,1:]
+
+        self.on_epoch_end()
+
+    def __getitem__(self, index):
+        """Generate one batch of data"""
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        X = []
+        I = []
+        S = []
+        Y = []
+        for idx in indexes:
+            lbl = self.labels[idx]
+            img = load_img(self.files[idx], target_size=self.target_size)
+            img = preprocess_input(img_to_array(img))
+            intention = to_categorical(self.INTENTION_MAPPING[lbl[self.INTENTION]], num_classes=self.num_intentions)
+            # transfer from km/h to m/s
+            speed = [lbl[self.SPEED]/3.6]
+            control = [lbl[self.STEER], lbl[self.GAS]-lbl[self.BRAKE]]
+            X.append(img)
+            I.append(intention)
+            S.append(speed)
+            Y.append(control)
+        X = np.array(X)
+        I = np.array(I)
+        S = np.array(S)
+        Y = np.array(Y)
+        return [X, I, S], Y
+
 intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 
 def test():
-    d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
+    #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
+    d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, max_samples=10)
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
+        print (x[2])
         if step == len(d)-1:
             break
 
