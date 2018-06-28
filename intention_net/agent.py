@@ -59,15 +59,17 @@ class IntentionNetAgent(Agent):
         rgb = scipy.misc.imresize(rgb, (224, 224))
         rgb = np.expand_dims(preprocess_input(rgb), axis=0)
 
-        intention = to_categorical([directions], num_classes=self.NUM_INTENTIONS)
+        intention = to_categorical([intention_mapping[directions]], num_classes=self.NUM_INTENTIONS)
 
-        pred_control = self.model.predict([rgb, intention])
+        speed = np.array([measurements.player_measurements.forward_speed])
+
+        pred_control = self.model.predict([rgb, intention, speed])
         control = Control()
         control.steer = pred_control[0][self.STEER]
         control.throttle = pred_control[0][self.GAS]
 
-        #if control.brake < 0.1:
-        #    control.brake = 0
+        if control.throttle < 0.0:
+            control.brake = -control.throttle
 
         control.hand_brake = 0
         control.reverse = 0

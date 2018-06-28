@@ -56,20 +56,24 @@ class CarlaSimDataset(keras.utils.Sequence):
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         X = []
         I = []
+        S = []
         Y = []
         for idx in indexes:
             lbl = self.labels[idx]
             img = load_img(self.files[idx], target_size=self.target_size)
             img = preprocess_input(img_to_array(img))
             intention = to_categorical(self.INTENTION_MAPPING[int(float(lbl['intention']))], num_classes=self.num_intentions)
+            speed = [float(lbl['speed'])]
             control = [float(lbl['steer']), float(lbl['throttle'])-float(lbl['brake'])]
             X.append(img)
             I.append(intention)
+            S.append(speed)
             Y.append(control)
         X = np.array(X)
         I = np.array(I)
+        S = np.array(S)
         Y = np.array(Y)
-        return [X, I], Y
+        return [X, I, S], Y
 
     def on_epoch_end(self):
         """Updates indexes after each epoch"""
@@ -86,7 +90,7 @@ intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 def test():
     d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     for step, (x,y) in enumerate(d):
-        print (x[0].shape, x[1].shape, y.shape)
+        print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         if step == len(d)-1:
             break
 

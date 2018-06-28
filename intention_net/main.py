@@ -150,11 +150,11 @@ def lr_schedule(epoch):
     """
     lr = flags_obj.learning_rate
     if epoch > 180:
-        lr *= 5e-2
+        lr *= 1e-2
     elif epoch > 160:
         lr *= 3e-2
     elif epoch > 120:
-        lr *= 1e-2
+        lr *= 7e-2
     elif epoch > 80:
         lr *= 1e-1
     print ('Learning rate: ', lr)

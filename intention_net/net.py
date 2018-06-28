@@ -23,8 +23,8 @@ def filter_control(args):
     #return outs[intention_idx, :]
     return K.gather(outs, intention_idx)
 
-def IntentionModel(num_intentions):
-    input = Input(shape=(num_intentions, ))
+def FCModel(input_length):
+    input = Input(shape=(input_length, ))
     x = Dense(64, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(input)
     x = Dropout(DROPOUT)(x)
     model = Model(inputs=input, outputs=x)
@@ -48,8 +48,10 @@ def IntentionNet(mode, num_control, num_intentions=-1):
     if mode == 'DLM':
         assert (num_intentions != -1), "Number of intentions must be bigger than one"
         intention_input = Input(shape=(num_intentions,))
-        intention_feat = IntentionModel(num_intentions)(intention_input)
-        feat = concatenate([rgb_feat, intention_feat])
+        intention_feat = FCModel(num_intentions)(intention_input)
+        speed_input = Input(shape=(1,))
+        speed_feat = FCModel(1)(speed_input)
+        feat = concatenate([rgb_feat, intention_feat, speed_feat])
         # controls
         outs = []
         for i in range(num_intentions):
@@ -60,7 +62,7 @@ def IntentionNet(mode, num_control, num_intentions=-1):
             outs.append(out)
         outs.append(intention_input)
         control = Lambda(filter_control, output_shape=(num_control, ))(outs)
-        model = Model(inputs=[rgb_input, intention_input], outputs=control)
+        model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
 
     else:
         pass
@@ -79,7 +81,7 @@ def test():
     img = np.expand_dims(img, axis=0)
 
     net = IntentionNet('DLM', 2, 4)
-    control = net.predict([img, to_categorical([1], num_classes=4)])
+    control = net.predict([img, to_categorical([1], num_classes=4), np.array([[1.]])])
     print (net.summary())
     print (control)
 
