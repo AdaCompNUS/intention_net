@@ -17,9 +17,11 @@ DROPOUT=0.3
 
 def filter_control(args):
     outs, intention = args[:-1], args[-1]
-    outs = K.stack(outs)
-    intention_idx = K.cast(K.argmax(intention), 'int32')
-    return outs[intention_idx[0], :, :]
+    outs = K.concatenate(outs, axis=0)
+    batch_size = K.shape(intention)[0]
+    intention_idx = K.cast(K.argmax(intention), 'int32') * batch_size + K.arange(0, batch_size)
+    #return outs[intention_idx, :]
+    return K.gather(outs, intention_idx)
 
 def IntentionModel(num_intentions):
     input = Input(shape=(num_intentions, ))
@@ -52,6 +54,8 @@ def IntentionNet(mode, num_control, num_intentions=-1):
         outs = []
         for i in range(num_intentions):
             out = Dropout(DROPOUT)(feat)
+            out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+            out = Dropout(DROPOUT)(out)
             out = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
             outs.append(out)
         outs.append(intention_input)
