@@ -55,7 +55,7 @@ class IntentionNetAgent(Agent):
 
     def run_step(self, measurements, sensor_data, directions, target):
         rgb = sensor_data['CameraRGB'].data
-        rgb = rgb[self._image_cut[0]:self._image_cut[1], :]
+        #rgb = rgb[self._image_cut[0]:self._image_cut[1], :]
         rgb = scipy.misc.imresize(rgb, (224, 224))
         rgb = np.expand_dims(preprocess_input(rgb), axis=0)
 
@@ -70,6 +70,7 @@ class IntentionNetAgent(Agent):
 
         if control.throttle < 0.0:
             control.brake = -control.throttle
+            control.throttle = 0.0
 
         control.hand_brake = 0
         control.reverse = 0
