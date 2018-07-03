@@ -124,7 +124,6 @@ def main(_):
         pass
 
 if __name__ == '__main__':
-    global cfg
     cfg = load_config(IntentionNetConfig)
 
     flags.DEFINE_enum(
