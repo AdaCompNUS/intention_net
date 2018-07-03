@@ -27,7 +27,7 @@ def pos_to_pixel(carla_map, x, y):
 
 def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plot_samples):
     lpes = []
-    steps= 50
+    steps= 100
     for i in tqdm(range(len(pixels))):
         pixel = pixels[i]
         theta = thetas[i]
