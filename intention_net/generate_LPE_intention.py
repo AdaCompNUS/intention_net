@@ -45,6 +45,7 @@ def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plo
         col, row, channel = img.shape
         M = cv2.getRotationMatrix2D((col/2, row/2), 90+theta, 1)
         img = cv2.warpAffine(img, M, (col, row), cv2.INTER_LINEAR, cv2.BORDER_CONSTANT, 1)
+        img = cv2.resize(img, (224, 224))
 
         mpimg.imsave(files[i], img)
 
