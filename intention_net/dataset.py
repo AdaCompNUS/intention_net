@@ -127,10 +127,12 @@ class CarlaImageDataset(CarlaSimDataset):
         self.num_samples = self.labels.shape[0]
         if max_samples is not None:
             self.num_samples = min(max_samples, self.num_samples)
+
         self.files = [self.data_dir + '/' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
-        self.labels = self.labels[:,1:]
         if self.mode.startswith('LPE'):
             self.lpe_files = [self.data_dir + '/lpe_' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
+
+        self.labels = self.labels[:,1:]
 
         self.on_epoch_end()
 
