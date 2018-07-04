@@ -55,7 +55,8 @@ class IntentionNetAgent(Agent):
 
     def run_step(self, measurements, sensor_data, directions, target):
         rgb = sensor_data['CameraRGB'].data
-        #rgb = rgb[self._image_cut[0]:self._image_cut[1], :]
+        # publish data need to cut
+        rgb = rgb[self._image_cut[0]:self._image_cut[1], :]
         rgb = scipy.misc.imresize(rgb, (224, 224))
         rgb = np.expand_dims(preprocess_input(rgb), axis=0)
 

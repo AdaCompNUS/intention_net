@@ -223,8 +223,8 @@ def main(_):
     # callbacks
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, shuffle=True)
-    val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, max_samples=1000)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True)
+    val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000)
 
     optimizer = get_optimizer()
 

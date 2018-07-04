@@ -80,7 +80,7 @@ def IntentionNet(mode, num_control, num_intentions=-1):
         out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
         out = Dropout(DROPOUT)(out)
         control = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
-        model = Model(inputs=[rgb_input, map_input, speed_input], outputs=control)
+        model = Model(inputs=[rgb_input, lpe_input, speed_input], outputs=control)
 
     return model
 

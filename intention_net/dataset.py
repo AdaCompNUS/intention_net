@@ -22,10 +22,11 @@ class CarlaSimDataset(keras.utils.Sequence):
     INTENTION_MAPPING[5] = 4
 
     NUM_CONTROL = 2
-    def __init__(self, data_dir, batch_size, num_intentions, target_size=(224, 224), shuffle=False, max_samples=None):
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_intentions = num_intentions
+        self.mode = mode
         self.shuffle = shuffle
         self.target_size = target_size
 
@@ -114,10 +115,11 @@ class CarlaImageDataset(CarlaSimDataset):
     CAMERA = 26
     CAMERA_YAW = 27
 
-    def __init__(self, data_dir, batch_size, num_intentions, target_size=(224, 224), shuffle=False, max_samples=None):
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_intentions = num_intentions
+        self.mode = mode
         self.shuffle = shuffle
         self.target_size = target_size
 
@@ -127,6 +129,8 @@ class CarlaImageDataset(CarlaSimDataset):
             self.num_samples = min(max_samples, self.num_samples)
         self.files = [self.data_dir + '/' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
         self.labels = self.labels[:,1:]
+        if self.mode.startswith('LPE'):
+            self.lpe_files = [self.data_dir + '/lpe_' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
 
         self.on_epoch_end()
 
@@ -141,7 +145,11 @@ class CarlaImageDataset(CarlaSimDataset):
             lbl = self.labels[idx]
             img = load_img(self.files[idx], target_size=self.target_size)
             img = preprocess_input(img_to_array(img))
-            intention = to_categorical(self.INTENTION_MAPPING[lbl[self.INTENTION]], num_classes=self.num_intentions)
+            if self.mode == 'DLM':
+                intention = to_categorical(self.INTENTION_MAPPING[lbl[self.INTENTION]], num_classes=self.num_intentions)
+            else:
+                intention = load_img(self.lpe_files[idx], target_size=self.target_size)
+                intention = preprocess_input(img_to_array(intention))
             # transfer from km/h to m/s
             speed = [lbl[self.SPEED]/3.6]
             control = [lbl[self.STEER], lbl[self.GAS]-lbl[self.BRAKE]]
@@ -159,7 +167,7 @@ intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 
 def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
-    d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, max_samples=10)
+    d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         print (x[2])
