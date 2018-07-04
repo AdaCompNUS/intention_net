@@ -83,7 +83,7 @@ flags.DEFINE_integer(
 
 flags.DEFINE_integer(
     name="num_gpus", short_name="ng",
-    default=1,
+    default=-1,
     help=help_wrap("How many GPUs to use with the DistributionStrategies API. The "
                     "default is 1 if TensorFlow can detect a GPU, and 0 otherwise."))
 

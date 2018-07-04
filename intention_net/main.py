@@ -180,6 +180,13 @@ def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
 
+    # get number of gpus, -1 means to use all gpus
+    if flags_obj.num_gpus == -1:
+        from tensorflow.python.client import device_lib  # pylint: disable=g-import-not-at-top
+        local_device_protos = device_lib.list_local_devices()
+        flags_obj.num_gpus = sum([1 for d in local_device_protos if d.device_type == "GPU"])
+    print ("=> Using {} gpus".format(flags_obj.num_gpus))
+
     if flags_obj.dataset == 'CARLA':
         from dataset import CarlaImageDataset as Dataset
         print ('=> using CARLA published data')
