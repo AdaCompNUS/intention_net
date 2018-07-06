@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import os
 import os.path as osp
 import csv
 import keras
@@ -12,7 +13,37 @@ from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
 
-class CarlaSimDataset(keras.utils.Sequence):
+class BaseDataset(keras.utils.Sequence):
+    NUM_CONTROL = 2
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.num_intentions = num_intentions
+        self.mode = mode
+        self.target_size = target_size
+        self.shuffle = shuffle
+        self.max_samples = max_samples
+        self.num_samples = None
+
+        self.init()
+
+        self.on_epoch_end()
+
+    def init(self):
+        # you must assigh the num_samples here.
+        raise NotImplementedError
+
+    def on_epoch_end(self):
+        """Updates indexes after each epoch"""
+        self.indexes = np.arange(self.num_samples)
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+
+    def __len__(self):
+        """Denote number of batches per epoch"""
+        return self.num_samples // self.batch_size
+
+class CarlaSimDataset(BaseDataset):
     # intention mapping
     INTENTION_MAPPING = {}
     INTENTION_MAPPING[0] = 0
@@ -23,13 +54,9 @@ class CarlaSimDataset(keras.utils.Sequence):
 
     NUM_CONTROL = 2
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        self.data_dir = data_dir
-        self.batch_size = batch_size
-        self.num_intentions = num_intentions
-        self.mode = mode
-        self.shuffle = shuffle
-        self.target_size = target_size
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
 
+    def init(self):
         self.labels = []
         self.files = []
         image_path_pattern = '_images/episode_{:s}/{:s}/image_{:0>5d}.jpg.png'
@@ -46,10 +73,8 @@ class CarlaSimDataset(keras.utils.Sequence):
                 fn = image_path_pattern.format(episode_name, 'CameraRGB', frames[episode_name])
                 self.files.append(osp.join(self.data_dir, fn))
         self.num_samples = len(self.labels)
-        if max_samples is not None:
-            self.num_samples = min(max_samples, self.num_samples)
-
-        self.on_epoch_end()
+        if self.max_samples is not None:
+            self.num_samples = min(self.max_samples, self.num_samples)
 
     def __getitem__(self, index):
         """Generate one batch of data"""
@@ -74,16 +99,6 @@ class CarlaSimDataset(keras.utils.Sequence):
         S = np.array(S)
         Y = np.array(Y)
         return [X, I, S], Y
-
-    def on_epoch_end(self):
-        """Updates indexes after each epoch"""
-        self.indexes = np.arange(self.num_samples)
-        if self.shuffle == True:
-            np.random.shuffle(self.indexes)
-
-    def __len__(self):
-        """Denote number of batches per epoch"""
-        return self.num_samples // self.batch_size
 
 class CarlaImageDataset(CarlaSimDataset):
     STEER = 0
@@ -116,25 +131,19 @@ class CarlaImageDataset(CarlaSimDataset):
     CAMERA_YAW = 27
 
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        self.data_dir = data_dir
-        self.batch_size = batch_size
-        self.num_intentions = num_intentions
-        self.mode = mode
-        self.shuffle = shuffle
-        self.target_size = target_size
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
 
+    def init(self):
         self.labels = np.loadtxt(osp.join(self.data_dir, 'label.txt'))
         self.num_samples = self.labels.shape[0]
-        if max_samples is not None:
-            self.num_samples = min(max_samples, self.num_samples)
+        if self.max_samples is not None:
+            self.num_samples = min(self.max_samples, self.num_samples)
 
         self.files = [self.data_dir + '/' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
         if self.mode.startswith('LPE'):
             self.lpe_files = [self.data_dir + '/lpe_' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
 
         self.labels = self.labels[:,1:]
-
-        self.on_epoch_end()
 
     def __getitem__(self, index):
         """Generate one batch of data"""
@@ -165,15 +174,49 @@ class CarlaImageDataset(CarlaSimDataset):
         Y = np.array(Y)
         return [X, I, S], Y
 
+class HuaWeiDataset(BaseDataset):
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+
+    def init(self):
+        self.car_data_header, self.car_data = self.read_csv(os.path.join(self.data_dir, 'LabelData_VehicleData_PRT.txt'))
+        self.intent_data_header, self.intent_data = self.read_csv(os.path.join(self.data_dir, 'LabelData_LaneCenterAndWidth_PRT.txt'), has_header=False)
+        print (self.car_data_header, len(self.car_data))
+        self.num_samples = self.max_samples
+
+    def read_csv(self, fn, has_header=True):
+        f = open(fn)
+        reader = csv.reader(f, delimiter=' ')
+        header = None
+        data = []
+        if has_header:
+            row_num = 0
+            for row in reader:
+                if row_num == 0:
+                    header = row
+                    row_num += 1
+                else:
+                    data.append(row)
+                    row_num += 1
+        else:
+            for row in reader:
+                data.append(row)
+
+        return header, data
+
+    def __getitem__(self, index):
+        pass
+
 intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 
 def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
-    d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
+    #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
+    d = HuaWeiDataset('/media/gaowei/Blade/linux_data/Data', 2, 5, 'DLM', max_samples=10)
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         print (x[2])
         if step == len(d)-1:
             break
 
-#test()
+test()
