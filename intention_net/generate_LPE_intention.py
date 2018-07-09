@@ -16,22 +16,26 @@ from PIL import Image
 from tqdm import tqdm
 
 from main import define_intention_net_flags
+from threadedgenerator import ThreadedGenerator
+from toolz import partition_all
 from config import *
 
 cfg = None
 flags_obj = None
 
 def pos_to_pixel(carla_map, x, y):
-    pixel = carla_map.convert_to_pixel([x, y, 39.430625915527344])
+    pixel = carla_map.convert_to_pixel([x, y, 0.22])
     return pixel
 
 def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plot_samples):
     lpes = []
-    steps= 100
-    for i in tqdm(range(len(pixels))):
+    steps= 120
+    it = ThreadedGenerator(range(len(pixels)), queue_maxsize=6400)
+    for idx in partition_all(1, tqdm(it)):
+        i = idx[0]
         pixel = pixels[i]
         theta = thetas[i]
-        img = intention_map[pixel[1]:pixel[1]+2*offset, pixel[0]:pixel[0]+2*offset]
+        img = np.copy(intention_map[pixel[1]:pixel[1]+2*offset, pixel[0]:pixel[0]+2*offset])
         # add history
         for h in range(max(0, i-steps), i):
             h_pixel = (offset + pixels[h][0] - pixel[0], offset + pixels[h][1] - pixel[1])

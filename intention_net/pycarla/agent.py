@@ -19,12 +19,9 @@ from keras.utils import to_categorical
 import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 
-try:
-    from .net import IntentionNet
-    from .dataset import preprocess_input, intention_mapping
-except Exception:
-    from net import IntentionNet
-    from dataset import preprocess_input, intention_mapping
+# intention net package
+from intention_net.net import IntentionNet
+from intention_net.dataset import preprocess_input, intention_mapping
 
 class IntentionNetAgent(Agent):
     STEER = 0
@@ -60,7 +57,10 @@ class IntentionNetAgent(Agent):
         rgb = scipy.misc.imresize(rgb, (224, 224))
         rgb = np.expand_dims(preprocess_input(rgb), axis=0)
 
-        intention = to_categorical([intention_mapping[directions]], num_classes=self.NUM_INTENTIONS)
+        if self.mode == 'DLM':
+            intention = to_categorical([intention_mapping[directions]], num_classes=self.NUM_INTENTIONS)
+        else:
+            intention = np.expand_dims(preprocess_input(directions), axis=0)
 
         speed = np.array([measurements.player_measurements.forward_speed])
 

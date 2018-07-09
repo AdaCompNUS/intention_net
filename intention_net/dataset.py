@@ -12,6 +12,7 @@ import keras
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
+from glob import glob
 
 class BaseDataset(keras.utils.Sequence):
     NUM_CONTROL = 2
@@ -26,6 +27,11 @@ class BaseDataset(keras.utils.Sequence):
         self.num_samples = None
 
         self.init()
+
+        assert (self.num_samples is not None), "You must assign self.num_samples in init() function."
+
+        if self.max_samples is not None:
+            self.num_samples = min(self.max_samples, self.num_samples)
 
         self.on_epoch_end()
 
@@ -73,8 +79,6 @@ class CarlaSimDataset(BaseDataset):
                 fn = image_path_pattern.format(episode_name, 'CameraRGB', frames[episode_name])
                 self.files.append(osp.join(self.data_dir, fn))
         self.num_samples = len(self.labels)
-        if self.max_samples is not None:
-            self.num_samples = min(self.max_samples, self.num_samples)
 
     def __getitem__(self, index):
         """Generate one batch of data"""
@@ -136,8 +140,6 @@ class CarlaImageDataset(CarlaSimDataset):
     def init(self):
         self.labels = np.loadtxt(osp.join(self.data_dir, 'label.txt'))
         self.num_samples = self.labels.shape[0]
-        if self.max_samples is not None:
-            self.num_samples = min(self.max_samples, self.num_samples)
 
         self.files = [self.data_dir + '/' + str(fn)+'.png' for fn in self.labels[:,0].astype(np.int32)][:self.num_samples]
         if self.mode.startswith('LPE'):
@@ -179,10 +181,47 @@ class HuaWeiDataset(BaseDataset):
         super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
 
     def init(self):
-        self.car_data_header, self.car_data = self.read_csv(os.path.join(self.data_dir, 'LabelData_VehicleData_PRT.txt'))
-        self.intent_data_header, self.intent_data = self.read_csv(os.path.join(self.data_dir, 'LabelData_LaneCenterAndWidth_PRT.txt'), has_header=False)
-        print (self.car_data_header, len(self.car_data))
-        self.num_samples = self.max_samples
+        routes = glob(os.path.join(self.data_dir, 'Log*'))
+        self.labels = []
+        self.num_samples = 0
+        for route in routes:
+            self.car_data_header, self.car_data = self.read_csv(os.path.join(route, 'LabelData_VehicleData_PRT.txt'))
+            self.labels.append(self.car_data)
+            self.num_samples += len(self.car_data)
+        # reverse header index
+        self.car_data_idx = {}
+        for k, v in enumerate(self.car_data_header):
+            self.car_data_idx[v] = k
+        self.global_map = None
+
+    def get_global_map(self, lat_min, lon_min, lat_max, lon_max, z=18):
+        import smopy
+        print (lat_min, lon_min, lat_max, lon_max)
+        map = smopy.Map((lat_min, lon_min, lat_max, lon_max), z=z)
+        self.global_map = map
+
+    # for debug use
+    def plot_trajectory(self):
+        import matplotlib.pyplot as plt
+        #convert from gcj2 to wgs-84
+        from coord_convert.utils import Transform
+        transform = Transform()
+        longitudes = []
+        latitudes = []
+        for label in self.labels:
+            for data in label:
+                lon = float(data[self.car_data_idx['longitude']])
+                lat = float(data[self.car_data_idx['latitude']])
+                #wgs_lon, wgs_lat = transform.gcj2wgs(lon, lat)
+                wgs_lon, wgs_lat = lon, lat
+                longitudes.append(wgs_lon)
+                latitudes.append(wgs_lat)
+        self.get_global_map(min(latitudes), min(longitudes), max(latitudes), max(longitudes))
+        pixels = [self.global_map.to_pixels(lat, lon) for lat, lon in zip(latitudes, longitudes)]
+        x, y = zip(*pixels)
+        ax = self.global_map.show_mpl(figsize=(8, 6))
+        ax.plot(x, y, 'ro')
+        plt.show()
 
     def read_csv(self, fn, has_header=True):
         f = open(fn)
@@ -212,11 +251,14 @@ intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
-    d = HuaWeiDataset('/media/gaowei/Blade/linux_data/Data', 2, 5, 'DLM', max_samples=10)
+    d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
+    d.plot_trajectory()
+    """
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         print (x[2])
         if step == len(d)-1:
             break
+    """
 
-test()
+#test()
