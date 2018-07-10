@@ -20,6 +20,7 @@ class IntentionPlanner(Planner):
         self.map = cv2.copyMakeBorder(self.map, self.offset, self.offset, self.offset, self.offset, cv2.BORDER_CONSTANT, value=[255, 255, 255, 255])
         # remember history for better planning
         self.history = deque(maxlen=120)
+        self.is_replan = False
 
     def get_next_command(self, source, source_ori, target, target_ori):
         print (source, source_ori, target, target_ori)
@@ -27,22 +28,33 @@ class IntentionPlanner(Planner):
 
         if self.mode == 'DLM':
             intention = super().get_next_command(source, source_ori, target, target_ori)
-            print (intention)
         else:
             track_source = self._city_track.project_node(source)
             track_target = self._city_track.project_node(target)
-            route = self._city_track.compute_route(track_source, source_ori,
-                                                   track_target, target_ori)
+            if self._city_track.is_away_from_intersection(track_source) or self.current_route is None:
+                route = self._city_track.compute_route(track_source, source_ori,
+                                                       track_target, target_ori)
+                self.current_route = route
+                self.is_replan = True
+            else:
+                route = self.current_route
+                self.is_replan = False
             map_route = [(int(pixel[0]+self.offset), int(pixel[1]+self.offset)) for pixel in [self._city_track._map.convert_to_pixel(node) for node in route]]
             s = self._city_track._map.convert_to_pixel(source)
             s = (s[0]+self.offset, s[1]+self.offset)
             self.history.append(s)
             intention = np.copy(self.map)
-            cv2.line(intention, s, map_route[0], (255, 0, 0, 255), 10)
+            if self.is_replan:
+                cv2.line(intention, s, map_route[0], (255, 0, 0, 255), 10)
+                for i in range(len(map_route)-1):
+                    cv2.line(intention, map_route[i], map_route[i+1], (255, 0, 0, 255), 10)
+            else:
+                cv2.line(intention, s, map_route[3], (255, 0, 0, 255), 10)
+                for i in range(3, len(map_route)-1):
+                    cv2.line(intention, map_route[i], map_route[i+1], (255, 0, 0, 255), 10)
+
             for h in self.history:
                 cv2.circle(intention, h, 2, (0,0,255,255), 5)
-            for i in range(len(map_route)-1):
-                cv2.line(intention, map_route[i], map_route[i+1], (255, 0, 0, 255), 10)
             source_pixel = self._city_track._map.convert_to_pixel(source)
             source_pixel = (int(source_pixel[0]), int(source_pixel[1]))
             intention = intention[source_pixel[1]:source_pixel[1]+2*self.offset, source_pixel[0]:source_pixel[0]+2*self.offset]

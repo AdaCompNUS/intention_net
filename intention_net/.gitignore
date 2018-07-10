@@ -1,3 +1,5 @@
 model*
+output*
+tiles*
 __pycache*
 logs*

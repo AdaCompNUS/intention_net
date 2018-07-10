@@ -195,10 +195,10 @@ class HuaWeiDataset(BaseDataset):
         self.global_map = None
 
     def get_global_map(self, lat_min, lon_min, lat_max, lon_max, z=18):
-        import smopy
-        print (lat_min, lon_min, lat_max, lon_max)
-        map = smopy.Map((lat_min, lon_min, lat_max, lon_max), z=z)
-        self.global_map = map
+        import pyMap
+        pyMap.process_latlng(lat_max, lon_min, lat_min, lon_max, z, output='huawei', maptype='gaode')
+        #map = smopy.Map((lat_min, lon_min, lat_max, lon_max), z=z)
+        #self.global_map = map
 
     # for debug use
     def plot_trajectory(self):
@@ -212,8 +212,8 @@ class HuaWeiDataset(BaseDataset):
             for data in label:
                 lon = float(data[self.car_data_idx['longitude']])
                 lat = float(data[self.car_data_idx['latitude']])
-                #wgs_lon, wgs_lat = transform.gcj2wgs(lon, lat)
-                wgs_lon, wgs_lat = lon, lat
+                wgs_lon, wgs_lat = transform.wgs2gcj(lon, lat)
+                #wgs_lon, wgs_lat = lon, lat
                 longitudes.append(wgs_lon)
                 latitudes.append(wgs_lat)
         self.get_global_map(min(latitudes), min(longitudes), max(latitudes), max(longitudes))
