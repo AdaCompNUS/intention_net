@@ -27,9 +27,9 @@ def pos_to_pixel(carla_map, x, y):
     pixel = carla_map.convert_to_pixel([x, y, 0.22])
     return pixel
 
-def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plot_samples):
+def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plot_samples, line_thick=4, steps=120):
     lpes = []
-    steps= 120
+    intention_map = cv2.copyMakeBorder(intention_map, offset, offset, offset, offset, cv2.BORDER_CONSTANT, value=[1, 1, 1, 1])
     it = ThreadedGenerator(range(len(pixels)), queue_maxsize=6400)
     for idx in partition_all(1, tqdm(it)):
         i = idx[0]
@@ -40,12 +40,12 @@ def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plo
         for h in range(max(0, i-steps), i):
             h_pixel = (offset + pixels[h][0] - pixel[0], offset + pixels[h][1] - pixel[1])
             if h_pixel[0] > 0 and h_pixel[0] < offset*2 and h_pixel[1] > 0 and h_pixel[1] < offset*2:
-                img[h_pixel[1]-4:h_pixel[1]+4, h_pixel[0]-4:h_pixel[0]+4] = [1.0, 0, 0, 1]
+                img[h_pixel[1]-line_thick:h_pixel[1]+line_thick, h_pixel[0]-line_thick:h_pixel[0]+line_thick] = [1.0, 0, 0, 1]
         # add ahead path
         for h in range(i, min(i+steps, len(pixels))):
             h_pixel = (offset + pixels[h][0] - pixel[0], offset + pixels[h][1] - pixel[1])
             if h_pixel[0] > 0 and h_pixel[0] < offset*2 and h_pixel[1] > 0 and h_pixel[1] < offset*2:
-                img[h_pixel[1]-4:h_pixel[1]+4, h_pixel[0]-4:h_pixel[0]+4] = [0, 0, 1.0, 1]
+                img[h_pixel[1]-line_thick:h_pixel[1]+line_thick, h_pixel[0]-line_thick:h_pixel[0]+line_thick] = [0, 0, 1.0, 1]
         col, row, channel = img.shape
         M = cv2.getRotationMatrix2D((col/2, row/2), 90+theta, 1)
         img = cv2.warpAffine(img, M, (col, row), cv2.INTER_LINEAR, cv2.BORDER_CONSTANT, 1)
@@ -60,7 +60,6 @@ def generate_lpe_intention(intention_map, pixels, thetas, offset, files, max_plo
 # radius in meters
 def parse_carla_dataset(labels, carla_map, map_image, radius=20, max_plot_samples=1000):
     offset = pos_to_pixel(carla_map, radius, radius)[0] - pos_to_pixel(carla_map, 0, 0)[0]
-    intention_map = cv2.copyMakeBorder(map_image, offset, offset, offset, offset, cv2.BORDER_CONSTANT, value=[1, 1, 1, 1])
     theta = np.arctan2(labels[:, -2], labels[:, -3]) * 180 / np.pi
     pixels = []
     files = []
@@ -69,7 +68,7 @@ def parse_carla_dataset(labels, carla_map, map_image, radius=20, max_plot_sample
         pixels.append(pixel)
         files.append(os.path.join(flags_obj.data_dir, 'lpe_'+str(int(labels[i,0]))+'.png'))
 
-    lpes = generate_lpe_intention(intention_map, pixels, theta, offset, files, max_plot_samples)
+    lpes = generate_lpe_intention(map_image, pixels, theta, offset, files, max_plot_samples)
 
     plot_orientation(map_image, pixels, theta, lpes)
 
@@ -83,9 +82,9 @@ def plot_orientation(map_image, pixels, theta, lpes):
     ax2.plot(theta[:len(lpes)])
     ax3 = fig.add_subplot(223)
     for i in tqdm(range(len(pixels))):
-        circle = Circle((pixels[i][0], pixels[i][1]), 12, color='r', label='A point')
+        circle = Circle((pixels[i][0], pixels[i][1]), 1, color='r', label='A point')
         ax.add_patch(circle)
-        if i % 100 == 0 and i < len(lpes):
+        if i % 50 == 0 and i < len(lpes):
             ax3.imshow(lpes[i])
             plt.draw()
             plt.pause(1e-5)
@@ -111,8 +110,8 @@ def main(_):
         from dataset import CarlaSimDataset as Dataset
         print ('=> using self-collected CARLA data')
     else:
-        print ('=> using HUAWEI data')
-        pass
+        print ('=> using HUAWEI data, the function is built-in the dataset')
+        return
 
     print (labels.shape, "first 10 labels", labels[:10])
 

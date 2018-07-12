@@ -8,11 +8,15 @@ import numpy as np
 import os
 import os.path as osp
 import csv
+import math
+import cv2
 import keras
+import itertools
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
 from glob import glob
+from tqdm import tqdm
 
 class BaseDataset(keras.utils.Sequence):
     NUM_CONTROL = 2
@@ -177,50 +181,172 @@ class CarlaImageDataset(CarlaSimDataset):
         return [X, I, S], Y
 
 class HuaWeiDataset(BaseDataset):
+    TURN_RIGHT = 0
+    GO_STRAIGHT = 1
+    TURN_LEFT = 2
+    REACH_GOAL = 3
+    DEFAULT_INTENTION = GO_STRAIGHT
+
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
         super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
 
     def init(self):
         routes = glob(os.path.join(self.data_dir, 'Log*'))
-        self.labels = []
-        self.num_samples = 0
+        self.org_labels = []
         for route in routes:
             self.car_data_header, self.car_data = self.read_csv(os.path.join(route, 'LabelData_VehicleData_PRT.txt'))
-            self.labels.append(self.car_data)
-            self.num_samples += len(self.car_data)
+            self.org_labels.append(self.car_data)
         # reverse header index
         self.car_data_idx = {}
         for k, v in enumerate(self.car_data_header):
             self.car_data_idx[v] = k
         self.global_map = None
 
+        # sync data
+        self.labels = []
+        self.images = []
+        self.intentions = []
+        self.num_samples = 0
+        for i, label in enumerate(self.org_labels):
+            # we drop the first few stop images when starting, because it is not a valid label
+            valid_start = False
+            labeled_images = []
+            labeled_data = []
+            labeled_lpes = []
+            for data in label:
+                if float(data[self.car_data_idx['current_velocity']]) > 0 and valid_start == False:
+                    valid_start = True
+                if valid_start:
+                    fn = os.path.join(routes[i], 'LabelImages/{}.jpg'.format(
+                        int(data[self.car_data_idx['img_frame']])))
+                    labeled_images.append(fn)
+                    lpe_fn = os.path.join(routes[i], 'LabelImages/lpe_{}.png'.format(
+                        int(data[self.car_data_idx['img_frame']])))
+                    labeled_images.append(fn)
+                    labeled_lpes.append(lpe_fn)
+                    labeled_data.append(data)
+            self.num_samples += len(labeled_images)
+            self.labels.append(labeled_data)
+            self.images.append(labeled_images)
+            self.intentions.append(labeled_lpes)
+
+        self.files = list(itertools.chain.from_iterable(self.images))
+        self.lpe_files = list(itertools.chain.from_iterable(self.intentions))
+        self.car_labels = list(itertools.chain.from_iterable(self.labels))
+        if self.mode == 'DLM':
+            self.generate_dlm()
+
     def get_global_map(self, lat_min, lon_min, lat_max, lon_max, z=18):
         import pyMap
-        pyMap.process_latlng(lat_max, lon_min, lat_min, lon_max, z, output='huawei', maptype='gaode')
-        #map = smopy.Map((lat_min, lon_min, lat_max, lon_max), z=z)
-        #self.global_map = map
+        import matplotlib.image as mpimg
+        self.left, self.top = pyMap.latlng2tilenum(lat_max, lon_min, z)
+        fn = os.path.join(os.path.dirname(__file__), 'output', 'huawei.png')
+        if not os.path.isfile(fn):
+            pyMap.process_latlng(lat_max, lon_min, lat_min, lon_max, z, output='huawei', maptype='gaode')
+        self.global_map = mpimg.imread(fn)
 
-    # for debug use
-    def plot_trajectory(self):
-        import matplotlib.pyplot as plt
+    def latlng2pixel(self, lat_deg, lng_deg, zoom=18):
+        n = math.pow(2, int(zoom))
+        xtile = ((lng_deg + 180) / 360) * n
+        lat_rad = lat_deg / 180 * np.pi
+        ytile = (1 - (np.log(np.tan(lat_rad) + 1 / np.cos(lat_rad)) / np.pi)) / 2 * n
+        x = (xtile - self.left)*256
+        y = (ytile - self.top)*256
+        return (np.floor(x).astype(np.int32), np.floor(y).astype(np.int32))
+
+    def get_pixels(self):
         #convert from gcj2 to wgs-84
         from coord_convert.utils import Transform
         transform = Transform()
         longitudes = []
         latitudes = []
+        thetas = []
         for label in self.labels:
+            lats = []
+            lons = []
+            ths = []
             for data in label:
                 lon = float(data[self.car_data_idx['longitude']])
                 lat = float(data[self.car_data_idx['latitude']])
                 wgs_lon, wgs_lat = transform.wgs2gcj(lon, lat)
-                #wgs_lon, wgs_lat = lon, lat
-                longitudes.append(wgs_lon)
-                latitudes.append(wgs_lat)
-        self.get_global_map(min(latitudes), min(longitudes), max(latitudes), max(longitudes))
-        pixels = [self.global_map.to_pixels(lat, lon) for lat, lon in zip(latitudes, longitudes)]
-        x, y = zip(*pixels)
-        ax = self.global_map.show_mpl(figsize=(8, 6))
-        ax.plot(x, y, 'ro')
+                lons.append(wgs_lon)
+                lats.append(wgs_lat)
+                ths.append(-float(data[self.car_data_idx['absolute_heading']])*180/np.pi)
+            latitudes.append(np.array(lats))
+            longitudes.append(np.array(lons))
+            thetas.append(np.array(ths))
+        lat_min = min([a.min() for a in latitudes])
+        lat_max = max([a.max() for a in latitudes])
+        lon_min = min([a.min() for a in longitudes])
+        lon_max = max([a.max() for a in longitudes])
+        self.get_global_map(lat_min, lon_min, lat_max, lon_max)
+        pixels = [self.latlng2pixel(lats, lons) for lats, lons in zip(latitudes, longitudes)]
+        return pixels, thetas
+
+    def generate_dlm(self, lookahead_steps=300, turning_threshold=20):
+        pixels, thetas = self.get_pixels()
+        self.dlms = []
+        for r, pixs in enumerate(tqdm(pixels)):
+            # look ahead orientation
+            for idx in tqdm(range(len(thetas[r]))):
+                current_theta = thetas[r][idx]
+                lookahead_theta = []
+                for l in range(idx, min(idx+lookahead_steps, len(thetas[r]))):
+                    lookahead_theta.append(thetas[r][l]-current_theta)
+                turning_angle = np.mean(lookahead_theta)
+                if len(lookahead_theta) < lookahead_steps:
+                    self.dlms.append(self.REACH_GOAL)
+                elif turning_angle < -turning_threshold:
+                    self.dlms.append(self.TURN_LEFT)
+                elif turning_angle > turning_threshold:
+                    self.dlms.append(self.TURN_RIGHT)
+                else:
+                    self.dlms.append(self.GO_STRAIGHT)
+
+    def generate_lpe(self):
+        """
+        Use to generate lpe intention for huawei data.
+        We move the function from generate_LPE_intention.py to here for simplicity
+        """
+        from generate_LPE_intention import generate_lpe_intention, plot_orientation
+        pixels, thetas = self.get_pixels()
+        for r, pixs in enumerate(pixels):
+            pixs = list(zip(pixs[0], pixs[1]))
+            lpes = generate_lpe_intention(self.global_map, pixs, thetas[r], 30, self.intentions[r], 3000, line_thick=2, steps=300)
+        plot_orientation(self.global_map, pixs, thetas[-1], lpes)
+
+    # for debug use
+    def plot_trajectory(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Arc
+        pixels, thetas = self.get_pixels()
+        offset = 0
+        for r, pixs in enumerate(pixels):
+            x, y = pixs
+            ax = plt.subplot(111)
+            ax.imshow(self.global_map)
+            ax.plot(x, y, 'r-')
+            skip = 100
+            arc_radius = 8
+            for i, theta in enumerate(thetas[r]):
+                if i % skip == 0:
+                    ax.arrow(x[i], y[i],
+                            0.05 * np.cos(theta/180*np.pi),
+                            0.05 * np.sin(theta/180*np.pi),
+                            head_width=1, head_length=20, fc='k', ec='k')
+                    """
+                    arc = Arc((x[i], y[i]),
+                      arc_radius*2, arc_radius*2,  # ellipse width and height
+                      theta1=0, theta2=theta*180/np.pi, linestyle='dashed')
+                    ax.add_patch(arc)
+                    """
+                    if self.mode == 'DLM':
+                        intention = self.dlms[i + offset]
+                        ax.arrow(x[i], y[i],
+                                0.5 * np.cos(-intention*np.pi/2),
+                                0.5 * np.sin(-intention*np.pi/2),
+                                head_width=3, head_length=20, fc='b', ec='b')
+            offset += len(thetas[r])
         plt.show()
 
     def read_csv(self, fn, has_header=True):
@@ -244,7 +370,33 @@ class HuaWeiDataset(BaseDataset):
         return header, data
 
     def __getitem__(self, index):
-        pass
+        """Generate one batch of data"""
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        X = []
+        I = []
+        S = []
+        Y = []
+        for idx in indexes:
+            lbl = self.car_labels[idx]
+            img = load_img(self.files[idx], target_size=self.target_size)
+            img = preprocess_input(img_to_array(img))
+            if self.mode == 'DLM':
+                intention = to_categorical(self.dlms[idx], num_classes=self.num_intentions)
+            else:
+                intention = load_img(self.lpe_files[idx], target_size=self.target_size)
+                intention = preprocess_input(img_to_array(intention))
+            # transfer from km/h to m/s
+            speed = [float(lbl[self.car_data_idx['current_velocity']])]
+            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']]), float(lbl[self.car_data_idx['ax']])]
+            X.append(img)
+            I.append(intention)
+            S.append(speed)
+            Y.append(control)
+        X = np.array(X)
+        I = np.array(I)
+        S = np.array(S)
+        Y = np.array(Y)
+        return [X, I, S], Y
 
 intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 
@@ -252,13 +404,12 @@ def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
     d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
+    #d.generate_lpe()
     d.plot_trajectory()
-    """
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
-        print (x[2])
+        print (x[2], y)
         if step == len(d)-1:
             break
-    """
 
 #test()
