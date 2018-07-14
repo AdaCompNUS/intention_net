@@ -222,7 +222,6 @@ class HuaWeiDataset(BaseDataset):
                     labeled_images.append(fn)
                     lpe_fn = os.path.join(routes[i], 'LabelImages/lpe_{}.png'.format(
                         int(data[self.car_data_idx['img_frame']])))
-                    labeled_images.append(fn)
                     labeled_lpes.append(lpe_fn)
                     labeled_data.append(data)
             self.num_samples += len(labeled_images)

@@ -1,5 +1,5 @@
 """
-Run the learned model to connect to simulator or real car
+Run the learned model to connect to simulator
 """
 
 from __future__ import absolute_import

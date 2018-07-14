@@ -194,8 +194,8 @@ def main(_):
         from dataset import CarlaSimDataset as Dataset
         print ('=> using self-collected CARLA data')
     else:
+        from dataset import HuaWeiDataset as Dataset
         print ('=> using HUAWEI data')
-        pass
 
     model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 
