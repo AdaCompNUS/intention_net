@@ -180,6 +180,108 @@ class CarlaImageDataset(CarlaSimDataset):
         Y = np.array(Y)
         return [X, I, S], Y
 
+class HuaWeiFinalDataset(BaseDataset):
+    STRAIGHT_FORWARD = 0
+    STRAIGHT_BACK = 1
+    LEFT_TURN = 2
+    RIGHT_TURN = 3
+    LANE_FOLLOW = 4
+
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+
+    def init(self):
+        routes = glob(os.path.join(self.data_dir, 'route*'))
+        print (routes)
+        self.raw_labels = []
+        for route in routes:
+            self.car_data_header, self.car_data = self.read_csv(os.path.join(route, 'LabelData_VehicleData_PRT.txt'))
+            self.raw_labels.append(self.car_data)
+        # reverse header index
+        self.car_data_idx = {}
+        for k, v in enumerate(self.car_data_header):
+            self.car_data_idx[v] = k
+
+        # sync data
+        self.labels = []
+        self.images = []
+        self.lpes = []
+        self.num_samples = 0
+        for i, label in enumerate(self.raw_labels):
+            # we drop the first few stop images when starting, because it is not a valid label
+            valid_start = False
+            labeled_data = []
+            labeled_images = []
+            labeled_lpes = []
+            for data in label:
+                if float(data[self.car_data_idx['current_velocity']]) > 0 and valid_start == False:
+                    valid_start = True
+                if valid_start:
+                    fn = os.path.join(routes[i], 'camera_img/front_60/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                    labeled_images.append(fn)
+                    lpe_fn = os.path.join(routes[i], 'intention_img/{}.jpg'.format(int(data[self.car_data_idx['intention_img']])))
+                    labeled_lpes.append(lpe_fn)
+                    labeled_data.append(data)
+            self.num_samples += len(labeled_images)
+            self.labels.append(labeled_data)
+            self.images.append(labeled_images)
+            self.lpes.append(labeled_lpes)
+
+        self.list_labels = list(itertools.chain.from_iterable(self.labels))
+        self.list_images = list(itertools.chain.from_iterable(self.images))
+        self.list_lpes = list(itertools.chain.from_iterable(self.lpes))
+
+    def __getitem__(self, index):
+        """
+        Generate one batc of data
+        """
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        X = []
+        I = []
+        S = []
+        Y = []
+        for idx in indexes:
+            lbl = self.list_labels[idx]
+            img = load_img(self.list_images[idx], target_size=self.target_size)
+            img = preprocess_input(img_to_array(img))
+            if self.mode == 'DLM':
+                intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
+            else:
+                intention = load_img(self.list_lpes[idx], target_size=self.target_size)
+                intention = preprocess_input(img_to_array(intention))
+
+            speed = [float(lbl[self.car_data_idx['current_velocity']])]
+            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']]), float(lbl[self.car_data_idx['ax']])]
+            X.append(img)
+            I.append(intention)
+            S.append(speed)
+            Y.append(control)
+        X = np.array(X)
+        I = np.array(I)
+        S = np.array(S)
+        Y = np.array(Y)
+        return [X, I, S], Y
+
+    def read_csv(self, fn, has_header=True):
+        f = open(fn)
+        reader = csv.reader(f, delimiter=' ')
+        header = None
+        data = []
+        if has_header:
+            row_num = 0
+            for row in reader:
+                if row_num == 0:
+                    header = row
+                    row_num += 1
+                else:
+                    data.append(row)
+                    row_num += 1
+        else:
+            for row in reader:
+                data.append(row)
+
+        return header, data
+
 class HuaWeiDataset(BaseDataset):
     TURN_RIGHT = 0
     GO_STRAIGHT = 1
@@ -402,9 +504,10 @@ intention_mapping = CarlaSimDataset.INTENTION_MAPPING
 def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
-    d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
+    #d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
+    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10)
     #d.generate_lpe()
-    d.plot_trajectory()
+    #d.plot_trajectory()
     for step, (x,y) in enumerate(d):
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         print (x[2], y)
