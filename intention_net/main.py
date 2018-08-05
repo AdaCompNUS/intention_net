@@ -180,6 +180,8 @@ def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
 
+    if flags_obj.val_dir is None:
+        flags_obj.val_dir = flags_obj.data_dir
     # get number of gpus, -1 means to use all gpus
     if flags_obj.num_gpus == -1:
         from tensorflow.python.client import device_lib  # pylint: disable=g-import-not-at-top
@@ -194,7 +196,7 @@ def main(_):
         from dataset import CarlaSimDataset as Dataset
         print ('=> using self-collected CARLA data')
     else:
-        from dataset import HuaWeiDataset as Dataset
+        from dataset import HuaWeiFinalDataset as Dataset
         print ('=> using HUAWEI data')
 
     model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)

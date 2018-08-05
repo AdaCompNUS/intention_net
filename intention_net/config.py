@@ -105,10 +105,6 @@ def load_config(cls):
     return cls._C
 
 class IntentionNetConfig(object):
-    data_dir = '/media/gaowei/Blade/linux_data/carla_data/AgentHuman/SeqTrain'
-    val_dir = '/media/gaowei/Blade/linux_data/carla_data/AgentHuman/SeqVal'
-    model_dir = '/home/gaowei/SegIRLNavNet/agents/intention_net/debug'
-    log_dir = '/home/gaowei/SegIRLNavNet/agents/intention_net/log'
     # default params
     train_epochs=100
     batch_size=48
