@@ -9,7 +9,6 @@ import os
 import os.path as osp
 import csv
 import math
-import cv2
 import keras
 import itertools
 from keras.preprocessing.image import load_img, img_to_array
@@ -20,7 +19,7 @@ from tqdm import tqdm
 
 class BaseDataset(keras.utils.Sequence):
     NUM_CONTROL = 2
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_intentions = num_intentions
@@ -28,6 +27,8 @@ class BaseDataset(keras.utils.Sequence):
         self.target_size = target_size
         self.shuffle = shuffle
         self.max_samples = max_samples
+        # whether to preprocess image
+        self.preprocess = preprocess
         self.num_samples = None
 
         self.init()
@@ -63,8 +64,8 @@ class CarlaSimDataset(BaseDataset):
     INTENTION_MAPPING[5] = 4
 
     NUM_CONTROL = 2
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess)
 
     def init(self):
         self.labels = []
@@ -138,8 +139,8 @@ class CarlaImageDataset(CarlaSimDataset):
     CAMERA = 26
     CAMERA_YAW = 27
 
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess)
 
     def init(self):
         self.labels = np.loadtxt(osp.join(self.data_dir, 'label.txt'))
@@ -187,8 +188,8 @@ class HuaWeiFinalDataset(BaseDataset):
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
 
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess)
 
     def init(self):
         routes = glob(os.path.join(self.data_dir, 'route*'))
@@ -242,16 +243,18 @@ class HuaWeiFinalDataset(BaseDataset):
         Y = []
         for idx in indexes:
             lbl = self.list_labels[idx]
-            img = load_img(self.list_images[idx], target_size=self.target_size)
-            img = preprocess_input(img_to_array(img))
+            img = img_to_array(load_img(self.list_images[idx], target_size=self.target_size))
+            if self.preprocess:
+                img = preprocess_input(img)
             if self.mode == 'DLM':
                 if int(lbl[self.car_data_idx['intention_type']]) > 4:
                     print (lbl)
                     print (lbl[self.car_data_idx['intention_type']], self.car_data_idx['intention_type'])
                 intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
             else:
-                intention = load_img(self.list_lpes[idx], target_size=self.target_size)
-                intention = preprocess_input(img_to_array(intention))
+                intention = img_to_array(load_img(self.list_lpes[idx], target_size=self.target_size))
+                if self.preprocess:
+                    intention = preprocess_input(intention)
 
             speed = [float(lbl[self.car_data_idx['current_velocity']])]
             control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']]), float(lbl[self.car_data_idx['ax']])]
@@ -293,8 +296,8 @@ class HuaWeiDataset(BaseDataset):
     REACH_GOAL = 3
     DEFAULT_INTENTION = GO_STRAIGHT
 
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None):
-        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples)
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess)
 
     def init(self):
         routes = glob(os.path.join(self.data_dir, 'Log*'))
@@ -509,7 +512,7 @@ def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
     #d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
-    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10)
+    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10, preprocess=False)
     #d.generate_lpe()
     #d.plot_trajectory()
     for step, (x,y) in enumerate(d):
