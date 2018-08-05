@@ -192,7 +192,6 @@ class HuaWeiFinalDataset(BaseDataset):
 
     def init(self):
         routes = glob(os.path.join(self.data_dir, 'route*'))
-        print (routes)
         self.raw_labels = []
         for route in routes:
             self.car_data_header, self.car_data = self.read_csv(os.path.join(route, 'LabelData_VehicleData_PRT.txt'))
@@ -213,6 +212,7 @@ class HuaWeiFinalDataset(BaseDataset):
             labeled_data = []
             labeled_images = []
             labeled_lpes = []
+            print (routes[i])
             for data in label:
                 if float(data[self.car_data_idx['current_velocity']]) > 0 and valid_start == False:
                     valid_start = True
@@ -245,6 +245,9 @@ class HuaWeiFinalDataset(BaseDataset):
             img = load_img(self.list_images[idx], target_size=self.target_size)
             img = preprocess_input(img_to_array(img))
             if self.mode == 'DLM':
+                if int(lbl[self.car_data_idx['intention_type']]) > 4:
+                    print (lbl)
+                    print (lbl[self.car_data_idx['intention_type']], self.car_data_idx['intention_type'])
                 intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
             else:
                 intention = load_img(self.list_lpes[idx], target_size=self.target_size)
@@ -280,7 +283,8 @@ class HuaWeiFinalDataset(BaseDataset):
             for row in reader:
                 data.append(row)
 
-        return header, data
+        # drop the last row because sometimes the last row is not complete
+        return header, data[:-1]
 
 class HuaWeiDataset(BaseDataset):
     TURN_RIGHT = 0
