@@ -49,7 +49,7 @@ class Policy(object):
         else:
             intention = np.expand_dims(preprocess_input(intention), axis=0)
 
-        speed = np.array = np.array([speed])
+        speed = np.array([[speed]])
 
         pred_control = self.model.predict([rgb, intention, speed])
         return pred_control
