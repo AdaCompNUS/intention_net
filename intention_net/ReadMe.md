@@ -51,8 +51,10 @@ python
 >> print (cv2.__file__) # get the cv2 path in python3
 # add this path directory to the front of PYTHONPATH
 # add back rospath
-source 
 source ~/catkin_cv/devel/setup.bash
 source /opt/ros/kinetic/setup.bash
 export PYTHONPATH=this_path_dir:$PYTHONPATH
+# install the intetion net package
+cd "the setup.py folder"
+pip install .
 ```

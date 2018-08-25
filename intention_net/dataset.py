@@ -194,6 +194,7 @@ class HuaWeiFinalDataset(BaseDataset):
     def init(self):
         routes = glob(os.path.join(self.data_dir, 'route*'))
         self.raw_labels = []
+        assert (len(routes) > 0), "no routes data founded in folder {}".format(self.data_dir)
         for route in routes:
             self.car_data_header, self.car_data = self.read_csv(os.path.join(route, 'LabelData_VehicleData_PRT.txt'))
             self.raw_labels.append(self.car_data)
