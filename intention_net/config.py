@@ -106,8 +106,8 @@ def load_config(cls):
 
 class IntentionNetConfig(object):
     # default params
-    train_epochs=100
-    batch_size=48
+    train_epochs=300
+    batch_size=8
 
     # Constants should start from _ in order not to get conflict with flags
     _C = edict()
