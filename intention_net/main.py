@@ -184,6 +184,7 @@ def get_optimizer():
 def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
+    print (flags_obj)
 
     if flags_obj.val_dir is None:
         flags_obj.val_dir = flags_obj.data_dir
