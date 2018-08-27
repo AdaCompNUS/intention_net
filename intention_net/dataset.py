@@ -188,8 +188,8 @@ class HuaWeiFinalDataset(BaseDataset):
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
     # use to normalize regression data
-    MAX_ACC = 2.0
-    MAX_STEER = 2*np.pi
+    SCALE_ACC = 0.5
+    SCALE_STEER = 2*np.pi
 
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True):
         super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess)
@@ -261,7 +261,7 @@ class HuaWeiFinalDataset(BaseDataset):
                     intention = preprocess_input(intention)
 
             speed = [float(lbl[self.car_data_idx['current_velocity']])]
-            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.MAX_STEER, float(lbl[self.car_data_idx['ax']])/self.MAX_STEER]
+            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_STEER]
             X.append(img)
             I.append(intention)
             S.append(speed)

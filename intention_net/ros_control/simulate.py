@@ -50,6 +50,11 @@ def plot_wrapper(dataset, data_dir, mode, model_dir, num_intentions=5):
         speed = x[2][0, 0]
         control = y[0]
         pred = policy.predict_control(img, intention, speed)[0]
+        # scale back
+        control[0] *= Dataset.SCALE_STEER
+        control[1] *= Dataset.SCALE_ACC
+        pred[0] *= Dataset.SCALE_STEER
+        pred[1] *= Dataset.SCALE_ACC
         # add data for plot
         ground_truth.append(control)
         pred_control.append(pred)
@@ -63,10 +68,10 @@ def plot_wrapper(dataset, data_dir, mode, model_dir, num_intentions=5):
     import matplotlib.pyplot as plt
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
     x = np.arange(len(sim_loader))
-    ax1.plot(x, ground_truth[:,0], 'k', lw=4)
-    ax1.plot(x, pred_control[:,0], 'r', lw=4)
-    ax2.plot(x, ground_truth[:,1], 'k--', lw=4)
-    ax2.plot(x, pred_control[:,1], 'r--', lw=4)
+    ax1.plot(x, ground_truth[:,0], 'k', lw=2)
+    ax1.plot(x, pred_control[:,0], 'r', lw=2)
+    ax2.plot(x, ground_truth[:,1], 'k', lw=2)
+    ax2.plot(x, pred_control[:,1], 'r', lw=2)
     ax1.plot(x, speeds, 'g', lw=4)
     ax2.plot(x, speeds, 'g', lw=4)
     fig.suptitle(mode, fontsize="x-large")
@@ -126,6 +131,6 @@ def main():
         'plot': plot_wrapper,
         'ros': main_wrapper,
     })
-    
+
 if __name__ == '__main__':
     main()
