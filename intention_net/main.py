@@ -184,7 +184,6 @@ def get_optimizer():
 def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
-    print (flags_obj)
 
     if flags_obj.val_dir is None:
         flags_obj.val_dir = flags_obj.data_dir
@@ -205,6 +204,7 @@ def main(_):
         from dataset import HuaWeiFinalDataset as Dataset
         print ('=> using HUAWEI data')
 
+    print ('mode: ', flags_obj.mode, 'input frame: ', flags_obj.input_frame)
     model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 
     if flags_obj.num_gpus > 1:
