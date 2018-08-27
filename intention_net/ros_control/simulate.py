@@ -22,7 +22,7 @@ from cv_bridge import CvBridge
 from policy import Policy
 
 
-def plot_wrapper(dataset, data_dir, mode, model_dir, num_intentions=5):
+def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=5):
     if dataset == 'CARLA':
         from intention_net.dataset import CarlaImageDataset as Dataset
         print ('=> use CARLA published data')
@@ -34,7 +34,7 @@ def plot_wrapper(dataset, data_dir, mode, model_dir, num_intentions=5):
         print ('=> use HUAWEI data')
 
     sim_loader = Dataset(data_dir, 1, num_intentions, mode, preprocess=False)
-    policy = Policy(mode, 2, model_dir, num_intentions)
+    policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
     ground_truth = []
     pred_control = []
     speeds = []
@@ -52,7 +52,7 @@ def plot_wrapper(dataset, data_dir, mode, model_dir, num_intentions=5):
         pred = policy.predict_control(img, intention, speed)[0]
         # scale back
         control[0] *= Dataset.SCALE_STEER
-        control[1] *= Dataset.SCALE_ACC
+        #control[1] *= Dataset.SCALE_ACC
         pred[0] *= Dataset.SCALE_STEER
         pred[1] *= Dataset.SCALE_ACC
         # add data for plot

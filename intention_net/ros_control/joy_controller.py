@@ -186,10 +186,10 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(model_dir, mode, num_intentions=5, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(model_dir, mode, input_frame, num_intentions=5, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
-    policy = Policy(mode, 2, model_dir, num_intentions)
+    policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
     controller.execute(policy)
 
 def main():

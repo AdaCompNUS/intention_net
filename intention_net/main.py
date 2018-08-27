@@ -139,6 +139,11 @@ def define_intention_net_flags():
             help=help_wrap("Intention Net mode to run"))
 
     flags.DEFINE_enum(
+            name='input_frame', short_name='input_frame', default="NORMAL",
+            enum_values=['NORMAL', 'WIDE', 'MULTI'],
+            help=help_wrap("Intention Net mode to run"))
+
+    flags.DEFINE_enum(
             name='dataset', short_name='ds', default="CARLA",
             enum_values=['CARLA_SIM', 'CARLA', 'HUAWEI'],
             help=help_wrap("dataset to load for training."))
@@ -221,11 +226,11 @@ def main(_):
     lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
                                    cooldown=0,
                                    patience=5,
-                                   min_lr=0.5e-6)
+                                   min_lr=1e-7)
 
     # save model
-    best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_best_model.h5')
-    lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.mode + '_latest_model.h5')
+    best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_best_model.h5')
+    lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_latest_model.h5')
     saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, mode='auto', skip=10)
     tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_graph=False, write_images=True, batch_size=flags_obj.batch_size)
 

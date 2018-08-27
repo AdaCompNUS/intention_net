@@ -19,7 +19,7 @@ from intention_net.net import IntentionNet
 from intention_net.dataset import preprocess_input
 
 class Policy(object):
-    def __init__(self, mode, num_control, path, num_intentions, gpu_fraction=0.75):
+    def __init__(self, mode, input_frame, num_control, path, num_intentions, gpu_fraction=0.75):
         # set keras session
         config_gpu = tf.ConfigProto()
         config_gpu.gpu_options.allow_growth = True
@@ -27,6 +27,7 @@ class Policy(object):
         KTF.set_session(tf.Session(config=config_gpu))
         self.model = None
         self.mode = mode
+        self.input_frame = input_frame
         self.num_control = num_control
         self.num_intentions = num_intentions
         self.path = path
@@ -35,7 +36,7 @@ class Policy(object):
     def load_model(self):
         model = IntentionNet(self.mode, self.num_control, self.num_intentions)
         # load checkpoint
-        fn = osp.join(self.path, self.mode+'_best_model.h5')
+        fn = osp.join(self.path, self.input_frame + '_' + self.mode+'_best_model.h5')
         model.load_weights(fn)
         print ("=> loaded checkpoint '{}'".format(fn))
         self.model = model
