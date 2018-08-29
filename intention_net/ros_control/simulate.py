@@ -52,7 +52,7 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
         pred = policy.predict_control(img, intention, speed)[0]
         # scale back
         control[0] *= Dataset.SCALE_STEER
-        #control[1] *= Dataset.SCALE_ACC
+        control[1] *= Dataset.SCALE_ACC
         pred[0] *= Dataset.SCALE_STEER
         pred[1] *= Dataset.SCALE_ACC
         # add data for plot
