@@ -228,7 +228,10 @@ class HuaWeiFinalDataset(BaseDataset):
                     elif self.input_frame == 'WIDE':
                         fn = os.path.join(routes[i], 'camera_img/front_96_left/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
                     else:
-                        fn = os.path.join(routes[i], 'camera_img/front_60/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn_l = os.path.join(routes[i], 'camera_img/front_96_left/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn_m = os.path.join(routes[i], 'camera_img/front_60/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn_r = os.path.join(routes[i], 'camera_img/front_96_right/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn = [fn_l, fn_m, fn_r]
                     labeled_images.append(fn)
                     lpe_fn = os.path.join(routes[i], 'intention_img/{}.jpg'.format(int(data[self.car_data_idx['intention_img']])))
                     labeled_lpes.append(lpe_fn)
@@ -244,7 +247,7 @@ class HuaWeiFinalDataset(BaseDataset):
 
     def __getitem__(self, index):
         """
-        Generate one batc of data
+        Generate one batch of data
         """
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         X = []
@@ -253,13 +256,16 @@ class HuaWeiFinalDataset(BaseDataset):
         Y = []
         for idx in indexes:
             lbl = self.list_labels[idx]
-            img = img_to_array(load_img(self.list_images[idx], target_size=self.target_size))
+            if self.input_frame == 'MULTI':
+                img_l = img_to_array(load_img(self.list_images[idx][0], target_size=(self.target_size[0], int(self.target_size[1]/4))))
+                img_m = img_to_array(load_img(self.list_images[idx][1], target_size=(self.target_size[0], int(self.target_size[1]/2))))
+                img_r = img_to_array(load_img(self.list_images[idx][2], target_size=(self.target_size[0], int(self.target_size[1]/4))))
+                img = np.concatenate([img_l, img_m, img_r], axis=1)
+            else:
+                img = img_to_array(load_img(self.list_images[idx], target_size=self.target_size))
             if self.preprocess:
                 img = preprocess_input(img)
             if self.mode == 'DLM':
-                if int(lbl[self.car_data_idx['intention_type']]) > 4:
-                    print (lbl)
-                    print (lbl[self.car_data_idx['intention_type']], self.car_data_idx['intention_type'])
                 intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
             else:
                 intention = img_to_array(load_img(self.list_lpes[idx], target_size=self.target_size))
@@ -522,7 +528,7 @@ def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
     #d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
-    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10, preprocess=False, input_frame='WIDE')
+    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10, preprocess=False, input_frame='MULTI')
     #d.generate_lpe()
     #d.plot_trajectory()
     import matplotlib.pyplot as plt
