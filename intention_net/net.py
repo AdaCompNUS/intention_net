@@ -30,15 +30,6 @@ def FCModel(input_length):
     model = Model(inputs=input, outputs=x)
     return model
 
-def SpeedModel(input_length):
-    input = Input(shape=(input_length, ))
-    x = Dense(512, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(input)
-    x = Dropout(DROPOUT)(x)
-    x = Dense(2048, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(input)
-    x = Dropout(DROPOUT)(x)
-    model = Model(inputs=input, outputs=x)
-    return model
-
 def FeatModel():
     feat_model = ResNet50(weights='imagenet')
     layer_dict = dict([(l.name, l) for l in feat_model.layers])
@@ -60,7 +51,7 @@ def IntentionNet(mode, num_control, num_intentions=-1):
         intention_input = Input(shape=(num_intentions,))
         intention_feat = FCModel(num_intentions)(intention_input)
         speed_input = Input(shape=(1,))
-        speed_feat = SpeedModel(1)(speed_input)
+        speed_feat = FCModel(1)(speed_input)
         feat = concatenate([rgb_feat, intention_feat, speed_feat])
         # controls
         outs = []
@@ -83,9 +74,12 @@ def IntentionNet(mode, num_control, num_intentions=-1):
             lpe_input = Input(shape=(224, 224, 3))
             lpe_feat = FeatModel()(lpe_input)
         speed_input = Input(shape=(1,))
-        speed_feat = SpeedModel(1)(speed_input)
-        feat = concatenate([rgb_feat, lpe_feat, speed_feat])
+        speed_feat = FCModel(1)(speed_input)
+        feat = concatenate([rgb_feat, lpe_feat])
         out = Dropout(DROPOUT)(feat)
+        out = Dense(64, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+        out = Dropout(DROPOUT)(out)
+        out = concatenate([out, speed_feat])
         control = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
         model = Model(inputs=[rgb_input, lpe_input, speed_input], outputs=control)
 
