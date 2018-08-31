@@ -189,7 +189,7 @@ class HuaWeiFinalDataset(BaseDataset):
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
     # use to normalize regression data
-    SCALE_ACC = 1.0
+    SCALE_ACC = 0.5
     SCALE_STEER = 2*np.pi
 
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True, input_frame='NORMAL'):
