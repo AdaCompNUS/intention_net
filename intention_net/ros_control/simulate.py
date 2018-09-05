@@ -20,7 +20,8 @@ from cv_bridge import CvBridge
 
 # import local file
 from policy import Policy
-
+# include quantitative metrics
+from intention_net.statistics import SmoothStatistics as Stats
 
 def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=5):
     if dataset == 'CARLA':
@@ -38,6 +39,8 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
     ground_truth = []
     pred_control = []
     speeds = []
+    # parse statistics
+    stat = Stats(input_frame, mode)
     for step, (x, y) in enumerate(tqdm(sim_loader)):
         if (step == len(sim_loader)):
             break
@@ -55,6 +58,7 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
         control[1] *= Dataset.SCALE_ACC
         pred[0] *= Dataset.SCALE_STEER
         pred[1] *= Dataset.SCALE_ACC
+        stat.include([speed, pred[0]])
         # add data for plot
         ground_truth.append(control)
         pred_control.append(pred)
@@ -64,6 +68,8 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
     pred_control = np.array(pred_control)
     speeds = np.array(speeds)
 
+    stat.log()
+    print (stat.str())
     # plot
     import matplotlib.pyplot as plt
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
