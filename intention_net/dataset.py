@@ -540,4 +540,11 @@ def test():
         if step == len(d)-1:
             break
 
+def check_valid_data():
+    d = HuaWeiFinalDataset('/data/gaowei/huawei/Data', 2, 5, 'LPE_SIAMESE', preprocess=False, input_frame='NORMAL')
+    for step, (x,y) in enumerate(tqdm(d)):
+        if step == len(d)-1:
+            break
+
 #test()
+#check_valid_data()
