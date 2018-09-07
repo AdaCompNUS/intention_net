@@ -184,6 +184,12 @@ def get_optimizer():
 def main(_):
     global flags_obj
     flags_obj = flags.FLAGS
+    # define gpu allocation config
+    import tensorflow as tf
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    sess = tf.Session(config=config)
+    K.set_session(sess)
 
     if flags_obj.val_dir is None:
         flags_obj.val_dir = flags_obj.data_dir
@@ -255,11 +261,5 @@ def main(_):
             epochs=flags_obj.train_epochs)
 
 if __name__ == '__main__':
-    # define gpu allocation config
-    import tensorflow as tf
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth=True
-    sess = tf.Session(config=config)
-    K.set_session(sess)
     define_intention_net_flags()
     absl_app.run(main)
