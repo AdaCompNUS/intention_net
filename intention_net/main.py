@@ -10,6 +10,7 @@ from tqdm import tqdm
 from time import time
 
 # keras import
+import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint, Callback, LearningRateScheduler
 from keras.callbacks import ReduceLROnPlateau
