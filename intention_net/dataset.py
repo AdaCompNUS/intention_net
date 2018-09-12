@@ -228,9 +228,9 @@ class HuaWeiFinalDataset(BaseDataset):
                     elif self.input_frame == 'WIDE':
                         fn = os.path.join(routes[i], 'camera_img/front_96_left/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
                     else:
-                        fn_l = os.path.join(routes[i], 'camera_img/front_96_left/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn_l = os.path.join(routes[i], 'camera_img/side_96_left/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
                         fn_m = os.path.join(routes[i], 'camera_img/front_60/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
-                        fn_r = os.path.join(routes[i], 'camera_img/front_96_right/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
+                        fn_r = os.path.join(routes[i], 'camera_img/side_96_right/{}.jpg'.format(int(data[self.car_data_idx['img_front_60_frame']])))
                         fn = [fn_l, fn_m, fn_r]
                     labeled_images.append(fn)
                     lpe_fn = os.path.join(routes[i], 'intention_img/{}.jpg'.format(int(data[self.car_data_idx['intention_img']])))
@@ -541,7 +541,7 @@ def test():
             break
 
 def check_valid_data():
-    d = HuaWeiFinalDataset('/data/gaowei/huawei/Data', 2, 5, 'LPE_SIAMESE', preprocess=False, input_frame='NORMAL')
+    d = HuaWeiFinalDataset('/data/gaowei/huawei/Data', 2, 5, 'LPE_SIAMESE', preprocess=False, input_frame='MULTI')
     for step, (x,y) in enumerate(tqdm(d)):
         if step == len(d)-1:
             break
