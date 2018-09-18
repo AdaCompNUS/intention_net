@@ -16,9 +16,12 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 import cv2
 from cv_bridge import CvBridge
+from intention_net.dataset import HuaWeiFinalDataset as Dataset
 
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+# SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
+SCREEN_SCALE = 2
+WINDOW_WIDTH = 1024
+WINDOW_HEIGHT = 768
 INTENTION = {
     0: 'STRAIGHT_FORWARD',
     1: 'STRAIGHT_BACK',
@@ -64,9 +67,9 @@ class Controller(object):
         # subscribe ros messages
         rospy.Subscriber('/image', Image, self.cb_image, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
-            rospy.Subscriber('/intention', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
         else:
-            rospy.Subscriber('/intention', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
+            rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1)
         rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
@@ -110,45 +113,49 @@ class Controller(object):
         if self._enable_auto_control:
             if self.image is not None and self.intention is not None and self.speed is not None:
                 pred_control = policy.predict_control(self.image, self.intention, self.speed)[0]
-                self.tele_twist.linear.x = pred_control[1]
-                self.tele_twist.angular.z = pred_control[0]
+                self.tele_twist.linear.x = pred_control[1]*Dataset.SCALE_ACC
+                self.tele_twist.angular.z = pred_control[0]*Dataset.SCALE_STEER
         # publish control
         self.control_pub.publish(self.tele_twist)
 
     def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=20):
         text = str(text)
-        font = pygame.font.SysFont('Comic Sans MS', size)#pygame.font.Font(font_type, size)
+        font = pygame.font.SysFont('Comic Sans MS', size*SCREEN_SCALE)#pygame.font.Font(font_type, size)
         text = font.render(text, True, color)
-        text_rect = text.get_rect(center=pos)
+        text_rect = text.get_rect(center=(pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE))
         self._display.blit(text, text_rect)
 
     def get_vertical_rect(self, value, pos):
+        pos = (pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE)
+        scale = 20*SCREEN_SCALE
         if value > 0:
-            return pygame.Rect((pos[0], pos[1]-value*20), (20, value*20))
+            return pygame.Rect((pos[0], pos[1]-value*scale), (scale, value*scale))
         else:
-            return pygame.Rect(pos, (20, -value*20))
+            return pygame.Rect(pos, (scale, -value*scale))
 
     def get_horizontal_rect(self, value, pos):
+        pos = (pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE)
+        scale = 20*SCREEN_SCALE
         if value > 0:
-            return pygame.Rect((pos[0]-value*10, pos[1]), (value*10, 20))
+            return pygame.Rect((pos[0]-value*scale, pos[1]), (value*scale, scale))
         else:
-            return pygame.Rect(pos, (-value*10, 20))
+            return pygame.Rect(pos, (-value*scale, scale))
 
     def control_bar(self, pos=(WINDOW_WIDTH-100, WINDOW_HEIGHT-150)):
         acc_rect = self.get_vertical_rect(self.tele_twist.linear.x, pos)
         pygame.draw.rect(self._display, (0, 255, 0), acc_rect)
-        steer_rect = self.get_horizontal_rect(-self.tele_twist.angular.z, (pos[0], pos[1]+110))
+        steer_rect = self.get_horizontal_rect(self.tele_twist.angular.z, (pos[0], pos[1]+110))
         pygame.draw.rect(self._display, (0, 255, 0), steer_rect)
         if self.labeled_control is not None:
             pygame.draw.rect(self._display, (255, 0, 0), self.get_vertical_rect(self.labeled_control.linear.x, (pos[0]-20, pos[1])))
-            pygame.draw.rect(self._display, (255, 0, 0), self.get_horizontal_rect(-self.labeled_control.angular.z, (pos[0], pos[1]+130)))
+            pygame.draw.rect(self._display, (255, 0, 0), self.get_horizontal_rect(self.labeled_control.angular.z, (pos[0], pos[1]+130)))
 
     def _on_render(self):
         """
         render loop
         """
         if self.image is not None:
-            array = cv2.resize(self.image, (WINDOW_WIDTH, WINDOW_HEIGHT))
+            array = cv2.resize(self.image, (WINDOW_WIDTH*SCREEN_SCALE, WINDOW_HEIGHT*SCREEN_SCALE))
             surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
             self._display.blit(surface, (0, 0))
         if self.speed is not None:
@@ -167,7 +174,7 @@ class Controller(object):
 
     def _initialize_game(self):
         self._display = pygame.display.set_mode(
-                (WINDOW_WIDTH, WINDOW_HEIGHT),
+                (WINDOW_WIDTH*SCREEN_SCALE, WINDOW_HEIGHT*SCREEN_SCALE),
                 pygame.HWSURFACE | pygame.DOUBLEBUF)
 
     def execute(self, policy):
