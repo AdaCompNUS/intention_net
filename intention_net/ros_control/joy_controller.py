@@ -165,7 +165,7 @@ class Controller(object):
                 self.text_to_screen(INTENTION[self.intention])
             else:
                 surface = pygame.surfarray.make_surface(self.intention.swapaxes(0, 1))
-                self._display.blit(surface, ((WINDOW_WIDTH-self.intention.shape[0])/2, 0))
+                self._display.blit(surface, (SCREEN_SCALE*(WINDOW_WIDTH-self.intention.shape[0])/2, 0))
 
         self.control_bar()
         self.text_to_screen("Auto: {}".format(self._enable_auto_control), pos=(150, WINDOW_HEIGHT-70))
