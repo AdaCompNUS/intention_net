@@ -83,7 +83,7 @@ class Controller(object):
         self.intention = msg.data
 
     def cb_lpe_intention(self, msg):
-        self.intention = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
     def cb_speed(self, msg):
         self.speed = msg.data
