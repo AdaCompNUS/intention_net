@@ -78,7 +78,7 @@ class Controller(object):
 
     def cb_image(self, msg):
         self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
-    
+
     def cb_dlm_intention(self, msg):
         self.intention = msg.data
 
@@ -118,7 +118,7 @@ class Controller(object):
         # publish control
         self.control_pub.publish(self.tele_twist)
 
-    def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=20):
+    def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=30):
         text = str(text)
         font = pygame.font.SysFont('Comic Sans MS', size*SCREEN_SCALE)#pygame.font.Font(font_type, size)
         text = font.render(text, True, color)
