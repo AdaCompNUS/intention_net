@@ -9,6 +9,7 @@ import shutil
 import os
 import csv
 import os.path as osp
+import numpy as np
 from tqdm import tqdm
 from munch import Munch
 from cv_bridge import CvBridge
@@ -42,7 +43,7 @@ TOPICS = [CAMERA_IMG,
 CHUNK_SIZE = 128
 
 def imgmsg_to_cv2(msg):
-    return CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
+    return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
 def parse_bag(bagfn):
     bag = rosbag.Bag(bagfn)
@@ -85,7 +86,7 @@ def parse_bag(bagfn):
             intention_lpe = msg
         elif 'control' in topic:
             acc = msg.linear.x
-            steer = msg.angular.z
+            steer = msg.angular.z/np.pi*180.0
         elif '/image' == topic:
             image = msg
             # publish at the same rate of image
@@ -98,30 +99,32 @@ def parse_bag(bagfn):
     bag.close()
 
 def main_wrapper(data_dir):
-    bagfns = glob.glob(data_dir + '/*.bag') 
+    bagfns = glob.glob(data_dir + '/*.bag')
     print ('bags:', bagfns)
     bags = chain(*[parse_bag(bagfn) for bagfn in bagfns])
     it = ThreadedGenerator(bags, queue_maxsize=6500)
     # make dirs for images
-    shutil.rmtree(osp.join(data_dir, 'gendata'))
-    os.mkdir(osp.join(data_dir, 'gendata'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'camera_img'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'camera_img', 'front_60'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'camera_img', 'front_96_left'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'camera_img', 'side_96_left'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'camera_img', 'side_96_right'))
-    os.mkdir(osp.join(data_dir, 'gendata', 'intention_img'))
-    f = open(osp.join(data_dir, 'gendata', 'LabelData_VehicleData_PRT.txt'), 'w')
+    gendir = 'route_gendata'
+    data_dir = osp.join(data_dir, 'data')
+    shutil.rmtree(osp.join(data_dir, gendir))
+    os.mkdir(osp.join(data_dir, gendir))
+    os.mkdir(osp.join(data_dir, gendir, 'camera_img'))
+    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'front_60'))
+    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'front_96_left'))
+    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'side_96_left'))
+    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'side_96_right'))
+    os.mkdir(osp.join(data_dir, gendir, 'intention_img'))
+    f = open(osp.join(data_dir, gendir, 'LabelData_VehicleData_PRT.txt'), 'w')
     labelwriter = csv.writer(f, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    labelwriter.writerow(['intention_type', 'current_velocity', 'steering_wheel_angle'])
+    labelwriter.writerow(['intention_type', 'current_velocity', 'steering_wheel_angle', 'ax', 'img_front_60_frame', 'intention_img'])
     for chunk in partition_all(CHUNK_SIZE, tqdm(it)):
         for c in chunk:
-            cv2.imwrite(osp.join(data_dir, 'gendata', 'camera_img', 'front_60', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, 'gendata', 'camera_img', 'front_96_left', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, 'gendata', 'camera_img', 'side_96_left', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, 'gendata', 'camera_img', 'side_96_right', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, 'gendata', 'intention_img', '{}.jpg'.format(c.t)), c.img)
-            print (c.acc, c.steer)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_60', '{}.jpg'.format(c.t)), c.img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_96_left', '{}.jpg'.format(c.t)), c.img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_left', '{}.jpg'.format(c.t)), c.img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_right', '{}.jpg'.format(c.t)), c.img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'intention_img', '{}.jpg'.format(c.t)), c.img)
+            labelwriter.writerow([c.dlm, c.speed, c.steer, c.acc, c.t, c.t])
 
 if __name__ == '__main__':
     fire.Fire(main_wrapper)
