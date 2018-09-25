@@ -106,7 +106,8 @@ def main_wrapper(data_dir):
     # make dirs for images
     gendir = 'route_gendata'
     data_dir = osp.join(data_dir, 'data')
-    shutil.rmtree(osp.join(data_dir, gendir))
+    if os.path.exists(osp.join(data_dir, gendir)) and os.path.isdir(osp.join(data_dir, gendir)):
+        shutil.rmtree(osp.join(data_dir, gendir))
     os.mkdir(osp.join(data_dir, gendir))
     os.mkdir(osp.join(data_dir, gendir, 'camera_img'))
     os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'front_60'))
