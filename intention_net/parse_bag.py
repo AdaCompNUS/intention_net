@@ -46,6 +46,7 @@ def imgmsg_to_cv2(msg):
     return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
 def parse_bag(bagfn):
+    print ('processing {} now'.format(bagfn))
     bag = rosbag.Bag(bagfn)
     image = None
     left_96 = None
