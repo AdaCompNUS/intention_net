@@ -272,19 +272,22 @@ class HuaWeiFinalDataset(BaseDataset):
                 if self.preprocess:
                     intention = preprocess_input(intention)
 
-            #speed = [float(lbl[self.car_data_idx['current_velocity']])]
+            extra = [float(lbl[self.car_data_idx['ax']])]
             #control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_ACC]
             control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['current_velocity']])/self.SCALE_ACC]
             X.append(img)
             I.append(intention)
-            #S.append(speed)
+            S.append(extra)
             Y.append(control)
         X = np.array(X)
         I = np.array(I)
-        #S = np.array(S)
+        S = np.array(S)
         Y = np.array(Y)
-        #return [X, I, S], Y
-        return [X, I], Y
+        if self.preprocess:
+            return [X, I], Y
+        else:
+            # this is for visualization and debug
+            return [X, I, S], Y
 
     def read_csv(self, fn, has_header=True):
         f = open(fn)

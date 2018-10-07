@@ -42,7 +42,7 @@ class Policy(object):
         print ("=> loaded checkpoint '{}'".format(fn))
         self.model = model
 
-    def predict_control(self, image, intention, speed):
+    def predict_control(self, image, intention, speed=None):
         rgb = scipy.misc.imresize(image, (224, 224))
         rgb = np.expand_dims(preprocess_input(rgb), axis=0)
 
@@ -51,7 +51,11 @@ class Policy(object):
         else:
             intention = np.expand_dims(preprocess_input(intention), axis=0)
 
-        speed = np.array([[speed]])
+        if speed is not None:
+            speed = np.array([[speed]])
 
-        pred_control = self.model.predict([rgb, intention, speed])
-        return pred_control
+            pred_control = self.model.predict([rgb, intention, speed])
+            return pred_control
+        else:
+            pred_control = self.model.predict([rgb, intention])
+            return pred_control
