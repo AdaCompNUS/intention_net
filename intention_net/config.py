@@ -41,7 +41,7 @@ flags.DEFINE_string(
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
-    name="optim", short_name="otm", default="rmsprop",
+    name="optim", short_name="otm", default="adam",
     help=help_wrap("Optimizer type for training"))
 
 flags.DEFINE_integer(
@@ -60,7 +60,7 @@ flags.DEFINE_integer(
     name="epochs_between_evals", short_name="ebe", default=10,
     help=help_wrap("The number of training epochs to run between evaluations"))
 
-flags.DEFINE_float('learning_rate', short_name="lr", default=1e-4,
+flags.DEFINE_float('learning_rate', short_name="lr", default=1e-3,
     help=help_wrap('Initial learning rate.'))
 
 flags.DEFINE_integer(

@@ -189,7 +189,7 @@ class HuaWeiFinalDataset(BaseDataset):
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
     # use to normalize regression data
-    SCALE_ACC = 0.5
+    SCALE_ACC = 5#0.5
     SCALE_STEER = 2*np.pi
 
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True, input_frame='NORMAL'):
@@ -272,17 +272,19 @@ class HuaWeiFinalDataset(BaseDataset):
                 if self.preprocess:
                     intention = preprocess_input(intention)
 
-            speed = [float(lbl[self.car_data_idx['current_velocity']])]
-            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_ACC]
+            #speed = [float(lbl[self.car_data_idx['current_velocity']])]
+            #control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_ACC]
+            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['current_velocity']])/self.SCALE_ACC]
             X.append(img)
             I.append(intention)
-            S.append(speed)
+            #S.append(speed)
             Y.append(control)
         X = np.array(X)
         I = np.array(I)
-        S = np.array(S)
+        #S = np.array(S)
         Y = np.array(Y)
-        return [X, I, S], Y
+        #return [X, I, S], Y
+        return [X, I], Y
 
     def read_csv(self, fn, has_header=True):
         f = open(fn)
