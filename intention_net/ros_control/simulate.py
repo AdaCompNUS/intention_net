@@ -107,6 +107,7 @@ def pid_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=
     desired_speed_pub = rospy.Publisher('/desired_speed', Float64, queue_size=1)
     pid_acc = None
     def cb_pid(msg):
+        nonlocal pid_acc
         pid_acc = msg.data
 
     pid_acc_sub = rospy.Subscriber('/control_effort', Float64, cb_pid, queue_size=1)
@@ -123,8 +124,9 @@ def pid_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=
     speeds = []
     # parse statistics
     stat = Stats(input_frame, mode)
+    last_speed = 0
     for step, (x, y) in enumerate(tqdm(sim_loader)):
-        if (step == len(sim_loader)):
+        if (step == len(sim_loader) or step > 500):
             break
         img = x[0][0].astype(np.uint8)
         intention = x[1][0]
@@ -143,7 +145,7 @@ def pid_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=
         stat.include([pred[1], pred[0]])
         # add data for plot
         ground_truth.append([control[0], acc])
-        pred_control.append([pred[0], pid_acc])
+        pred_control.append([pred[0], pred[1], pid_acc])
         speeds.append(control[1])
 
         twist = Twist()
@@ -153,10 +155,11 @@ def pid_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=
         img = CvBridge().cv2_to_imgmsg(img, encoding='bgr8')
         rgb_pub.publish(img)
         intention_pub.publish(intention)
-        speed_pub.publish(control[1])
+        speed_pub.publish(last_speed)
         desired_speed_pub.publish(pred[1])
         control_pub.publish(twist)
         rate.sleep()
+        last_speed = control[1]
     # change to numpy array
     ground_truth = np.array(ground_truth)
     pred_control = np.array(pred_control)
@@ -167,11 +170,12 @@ def pid_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=
     # plot
     import matplotlib.pyplot as plt
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-    x = np.arange(len(sim_loader))
+    x = np.arange(step)
     ax1.plot(x, ground_truth[:,0], 'k', lw=2)
     ax1.plot(x, pred_control[:,0], 'r', lw=2)
     ax2.plot(x, ground_truth[:,1], 'k', lw=2)
     ax2.plot(x, pred_control[:,1], 'r', lw=2)
+    ax2.plot(x, pred_control[:,2], 'b', lw=2)
     ax1.plot(x, speeds, 'g', lw=4)
     ax2.plot(x, speeds, 'g', lw=4)
     fig.suptitle(mode, fontsize="x-large")

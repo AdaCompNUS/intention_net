@@ -38,22 +38,30 @@ def FeatModel():
     oup = Flatten()(oup)
     return Model(inputs=inp, outputs=oup)
 
-def IntentionNet(mode, num_control, num_intentions=-1):
-    print ('Intention Mode', mode)
-    # Input for intention net
-    rgb_input = Input(shape=(224, 224, 3))
-
+def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
+    print (f'Intention Mode {mode} Input frame {input_frame}')
     # model
     feat_model = FeatModel()
-    rgb_feat = feat_model(rgb_input)
+    if input_frame != 'MULTI':
+        # Input for intention net
+        rgb_input = Input(shape=(224, 224, 3))
+        rgb_feat = [feat_model(rgb_input)]
+    else:
+        rgbl_input = Input(shape=(224, 224, 3))
+        rgbm_input = Input(shape=(224, 224, 3))
+        rgbr_input = Input(shape=(224, 224, 3))
+        rgbl_feat = feat_model(rgbl_input)
+        rgbm_feat = feat_model(rgbm_input)
+        rgbr_feat = feat_model(rgbr_input)
+        rgb_feat = [rgbl_feat, rgbm_feat, rgbr_feat]
+
     if mode == 'DLM':
         assert (num_intentions != -1), "Number of intentions must be bigger than one"
         intention_input = Input(shape=(num_intentions,))
         intention_feat = FCModel(num_intentions)(intention_input)
-        #speed_input = Input(shape=(1,))
-        #speed_feat = FCModel(1)(speed_input)
-        #feat = concatenate([rgb_feat, intention_feat, speed_feat])
-        feat = concatenate([rgb_feat, intention_feat])
+        speed_input = Input(shape=(1,))
+        speed_feat = FCModel(1)(speed_input)
+        feat = concatenate(rgb_feat + [intention_feat, speed_feat])
         # controls
         outs = []
         for i in range(num_intentions):
@@ -64,8 +72,11 @@ def IntentionNet(mode, num_control, num_intentions=-1):
             outs.append(out)
         outs.append(intention_input)
         control = Lambda(filter_control, output_shape=(num_control, ))(outs)
-        #model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
-        model = Model(inputs=[rgb_input, intention_input], outputs=control)
+
+        if input_frame != 'MULTI':
+            model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
+        else:
+            model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, intention_input, speed_input], outputs=control)
 
     else:
         if mode == 'LPE_SIAMESE':
@@ -77,10 +88,16 @@ def IntentionNet(mode, num_control, num_intentions=-1):
             lpe_feat = FeatModel()(lpe_input)
         speed_input = Input(shape=(1,))
         speed_feat = FCModel(1)(speed_input)
-        feat = concatenate([rgb_feat, lpe_feat, speed_feat])
+        feat = concatenate(rgb_feat + [lpe_feat, speed_feat])
         out = Dropout(DROPOUT)(feat)
+        out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+        out = Dropout(DROPOUT)(out)
         control = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
-        model = Model(inputs=[rgb_input, lpe_input, speed_input], outputs=control)
+
+        if input_frame != 'MULTI':
+            model = Model(inputs=[rgb_input, lpe_input, speed_input], outputs=control)
+        else:
+            model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, lpe_input, speed_input], outputs=control)
 
     return model
 

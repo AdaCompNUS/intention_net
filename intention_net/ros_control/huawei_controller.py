@@ -11,7 +11,7 @@ from joy_teleop import JOY_MAPPING
 from policy import Policy
 # ros packages
 import rospy
-from sensor_msgs.msg import Joy, Image
+from sensor_msgs.msg import Joy, Image, Imu
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 import cv2
@@ -67,29 +67,32 @@ class Controller(object):
         # subscribe ros messages
         rospy.Subscriber('/image', Image, self.cb_image, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
-            rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/intention_dlm', Imu, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1)
-        rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
+        rospy.Subscriber('/speed', Imu, self.cb_speed, queue_size=1)
+        rospy.Subscriber('/control', Imu, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
         # publish control
-        self.control_pub = rospy.Publisher('/control', Twist, queue_size=1)
+        self.control_pub = rospy.Publisher('/t_control', Twist, queue_size=1)
 
     def cb_image(self, msg):
         self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
     def cb_dlm_intention(self, msg):
-        self.intention = msg.data
+        self.intention = msg.linear_acceleration.x
 
     def cb_lpe_intention(self, msg):
         self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
     def cb_speed(self, msg):
-        self.speed = msg.data
+        self.speed = msg.linear_acceleration.x
 
     def cb_labeled_control(self, msg):
-        self.labeled_control = msg
+        t = Twist()
+        t.linear.x = msg.linear_acceleration.x
+        t.angular.z = msg.angular_velocity.z
+        self.labeled_control = t
 
     def cb_joy(self, data):
         self.tele_twist.linear.x = self._scale_x * data.axes[JOY_MAPPING['axes']['left_stick_ud']]

@@ -189,7 +189,7 @@ class HuaWeiFinalDataset(BaseDataset):
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
     # use to normalize regression data
-    SCALE_ACC = 5#0.5
+    SCALE_ACC = 0.8
     SCALE_STEER = 2*np.pi
 
     def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True, input_frame='NORMAL'):
@@ -251,20 +251,30 @@ class HuaWeiFinalDataset(BaseDataset):
         """
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
         X = []
+        XL = []
+        XM = []
+        XR = []
         I = []
         S = []
         Y = []
         for idx in indexes:
             lbl = self.list_labels[idx]
             if self.input_frame == 'MULTI':
-                img_l = img_to_array(load_img(self.list_images[idx][0], target_size=(self.target_size[0], int(self.target_size[1]/4))))
-                img_m = img_to_array(load_img(self.list_images[idx][1], target_size=(self.target_size[0], int(self.target_size[1]/2))))
-                img_r = img_to_array(load_img(self.list_images[idx][2], target_size=(self.target_size[0], int(self.target_size[1]/4))))
-                img = np.concatenate([img_l, img_m, img_r], axis=1)
+                img_l = img_to_array(load_img(self.list_images[idx][0], target_size=self.target_size))
+                img_m = img_to_array(load_img(self.list_images[idx][1], target_size=self.target_size))
+                img_r = img_to_array(load_img(self.list_images[idx][2], target_size=self.target_size))
+                img = [img_l, img_m, img_r]
+                if self.preprocess:
+                    img = [preprocess_input(im) for im in img]
+                XL.append(img[0])
+                XM.append(img[1])
+                XR.append(img[2])
             else:
                 img = img_to_array(load_img(self.list_images[idx], target_size=self.target_size))
-            if self.preprocess:
-                img = preprocess_input(img)
+                if self.preprocess:
+                    img = preprocess_input(img)
+                X.append(img)
+
             if self.mode == 'DLM':
                 intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
             else:
@@ -272,21 +282,26 @@ class HuaWeiFinalDataset(BaseDataset):
                 if self.preprocess:
                     intention = preprocess_input(intention)
 
-            extra = [float(lbl[self.car_data_idx['ax']])]
-            #control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_ACC]
-            control = [np.pi/180.0*float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['current_velocity']])/self.SCALE_ACC]
-            X.append(img)
+            extra = [float(lbl[self.car_data_idx['current_velocity']])]
+            control = [float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']])/self.SCALE_ACC]
+
             I.append(intention)
             S.append(extra)
             Y.append(control)
-        X = np.array(X)
-        I = np.array(I)
-        S = np.array(S)
-        Y = np.array(Y)
-        if self.preprocess:
-            return [X, I], Y
+
+        if self.input_frame == 'MULTI':
+            XL = np.array(XL)
+            XM = np.array(XM)
+            XR = np.array(XR)
+            I = np.array(I)
+            S = np.array(S)
+            Y = np.array(Y)
+            return [XL, XM, XR, I, S], Y
         else:
-            # this is for visualization and debug
+            X = np.array(X)
+            I = np.array(I)
+            S = np.array(S)
+            Y = np.array(Y)
             return [X, I, S], Y
 
     def read_csv(self, fn, has_header=True):
@@ -533,15 +548,15 @@ def test():
     #d = CarlaSimDataset('/home/gaowei/SegIRLNavNet/_benchmarks_results/Debug', 2, 5, max_samples=10)
     #d = CarlaImageDataset('/media/gaowei/Blade/linux_data/carla_data/AgentHuman/ImageData', 2, 5, mode='LPE_SIAMESE', max_samples=10)
     #d = HuaWeiDataset('/media/gaowei/Blade/linux_data/HuaWeiData', 2, 5, 'DLM', max_samples=10)
-    d = HuaWeiFinalDataset('/media/gaowei/Blade/linux_data/chrome-download/HuaWei/data', 2, 5, 'LPE_SIAMESE', max_samples=10, preprocess=False, input_frame='MULTI')
+    d = HuaWeiFinalDataset('/home/gaowei/Data/Huawei/data/train/data', 2, 5, 'LPE_SIAMESE', max_samples=10, preprocess=False, input_frame='MULTI')
     #d.generate_lpe()
     #d.plot_trajectory()
     import matplotlib.pyplot as plt
     for step, (x,y) in enumerate(d):
-        plt.imshow(x[0][0])
-        plt.show()
         print (x[0].shape, x[1].shape, x[2].shape, y.shape)
         print (x[2], y)
+        plt.imshow(x[0][0])
+        plt.show()
         if step == len(d)-1:
             break
 

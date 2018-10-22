@@ -13,7 +13,7 @@ import numpy as np
 from tqdm import tqdm
 from munch import Munch
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, Imu
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 from toolz import partition_all
@@ -29,7 +29,7 @@ CAMERA_RIGHT_96 = '/fr_96_image'
 INTENTION_DLM = '/intention_dlm'
 INTENTION_LPE = '/intention_lpe'
 SPEED = '/speed'
-CONTROL = '/labeled_control'
+CONTROL = '/control'
 TOPICS = [CAMERA_IMG,
           CAMERA_FRONT_96,
           CAMERA_LEFT_96,
@@ -80,14 +80,14 @@ def parse_bag(bagfn):
         elif 'front_96' in topic:
             front_96 = msg
         elif 'speed' in topic:
-            speed = msg.data
+            speed = msg.linear_acceleration.x
         elif 'dlm' in topic:
-            intention_dlm = msg.data
+            intention_dlm = int(msg.linear_acceleration.x)
         elif 'lpe' in topic:
             intention_lpe = msg
         elif 'control' in topic:
-            acc = msg.linear.x
-            steer = msg.angular.z/np.pi*180.0
+            acc = msg.linear_acceleration.x
+            steer = msg.angular_velocity.z
         elif '/image' == topic:
             image = msg
             # publish at the same rate of image

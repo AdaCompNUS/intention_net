@@ -215,8 +215,8 @@ def main(_):
         from dataset import HuaWeiFinalDataset as Dataset
         print ('=> using HUAWEI data')
 
-    print ('mode: ', flags_obj.mode, 'input frame: ', flags_obj.input_frame)
-    model = IntentionNet(flags_obj.mode, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
+    print ('mode: ', flags_obj.mode, 'input frame: ', flags_obj.input_frame, 'bath_size', flags_obj.batch_size)
+    model = IntentionNet(flags_obj.mode, flags_obj.input_frame, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 
     if flags_obj.num_gpus > 1:
         # make the model parallel
@@ -243,15 +243,15 @@ def main(_):
     # save model
     best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_best_model.h5')
     lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_latest_model.h5')
-    saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, mode='auto', skip=10)
+    saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', skip=10)
     tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_graph=False, write_images=True, batch_size=flags_obj.batch_size)
 
     # callbacks
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
     # we choose max_samples to save time for training. For large dataset, we sample 200000 samples each epoch.
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=200000)
-    val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=200000, input_frame=flags_obj.input_frame)
+    val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000, input_frame=flags_obj.input_frame)
 
     optimizer = get_optimizer()
 
