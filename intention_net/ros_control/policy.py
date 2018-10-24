@@ -34,7 +34,7 @@ class Policy(object):
         self.load_model()
 
     def load_model(self):
-        model = IntentionNet(self.mode, self.num_control, self.num_intentions)
+        model = IntentionNet(self.mode, self.input_frame, self.num_control, self.num_intentions)
         # load checkpoint
         #fn = osp.join(self.path, self.input_frame + '_' + self.mode+'_best_model.h5')
         fn = osp.join(self.path, self.input_frame + '_' + self.mode+'_latest_model.h5')
