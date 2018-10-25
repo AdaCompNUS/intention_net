@@ -77,13 +77,13 @@ class Controller(object):
         self.control_pub = rospy.Publisher('/t_control', Twist, queue_size=1)
 
     def cb_image(self, msg):
-        self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.image = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='rgb8'), (224, 224))
 
     def cb_dlm_intention(self, msg):
-        self.intention = msg.linear_acceleration.x
+        self.intention = int(msg.linear_acceleration.x)
 
     def cb_lpe_intention(self, msg):
-        self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+        self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='rgb8'), (224, 224))
 
     def cb_speed(self, msg):
         self.speed = msg.linear_acceleration.x
@@ -199,7 +199,7 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(model_dir, mode, input_frame, num_intentions=5, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(model_dir, mode, input_frame, num_intentions=5, scale_x=1, scale_z=1, rate=28):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     policy = Policy(mode, input_frame, 2, model_dir, num_intentions)

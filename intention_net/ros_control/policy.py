@@ -43,8 +43,7 @@ class Policy(object):
         self.model = model
 
     def predict_control(self, image, intention, speed=None):
-        rgb = scipy.misc.imresize(image, (224, 224))
-        rgb = np.expand_dims(preprocess_input(rgb), axis=0)
+        rgb = np.expand_dims(preprocess_input(image), axis=0)
 
         if self.mode == 'DLM':
             intention = to_categorical([intention], num_classes=self.num_intentions)

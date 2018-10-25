@@ -13,7 +13,7 @@ from tqdm import tqdm
 # ros packages
 import rospy
 from std_msgs.msg import Float64, Int32
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, Imu
 from geometry_msgs.msg import Twist
 import cv2
 from cv_bridge import CvBridge
@@ -199,35 +199,39 @@ def main_wrapper(dataset, data_dir, num_intentions=5, mode='DLM'):
     # create rosnode
     rospy.init_node('simulate')
     # only for debug so make it slow
-    rate = rospy.Rate(5)
+    rate = rospy.Rate(28)
     rgb_pub = rospy.Publisher('/image', Image, queue_size=1)
-    speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-    control_pub = rospy.Publisher('/labeled_control', Twist, queue_size=1)
+    speed_pub = rospy.Publisher('/speed', Imu, queue_size=1)
+    control_pub = rospy.Publisher('/control', Imu, queue_size=1)
     if mode == 'DLM':
-        intention_pub = rospy.Publisher('/intention', Int32, queue_size=1)
+        intention_pub = rospy.Publisher('/intention_dlm', Imu, queue_size=1)
     else:
-        intention_pub = rospy.Publisher('/intention', Image, queue_size=1)
+        intention_pub = rospy.Publisher('/intention_lpe', Image, queue_size=1)
 
     sim_loader = Dataset(data_dir, 1, num_intentions, mode, preprocess=False)
     for step, (x, y) in enumerate(tqdm(sim_loader)):
         img = x[0][0].astype(np.uint8)
-        img = CvBridge().cv2_to_imgmsg(img, encoding='bgr8')
+        img = CvBridge().cv2_to_imgmsg(img, encoding='rgb8')
         intention = x[1][0]
         if mode == 'DLM':
             intention = np.argmax(intention)
         else:
             intention = intention.astype(np.uint8)
-            intention = CvBridge().cv2_to_imgmsg(intention, encoding='bgr8')
+            intention = CvBridge().cv2_to_imgmsg(intention, encoding='rgb8')
         speed = x[2][0, 0]
         control = y[0]
-        twist = Twist()
-        twist.linear.x = control[1]
-        twist.angular.z = control[0]
+        ci = Imu()
+        ci.linear_acceleration.x = control[1]*Dataset.SCALE_ACC
+        ci.angular_velocity.z = control[0]*Dataset.SCALE_STEER
         # publish topics
         rgb_pub.publish(img)
-        intention_pub.publish(intention)
-        speed_pub.publish(speed)
-        control_pub.publish(twist)
+        i = Imu()
+        i.linear_acceleration.x = intention
+        intention_pub.publish(i)
+        i = Imu()
+        i.linear_acceleration.x = speed
+        speed_pub.publish(i)
+        control_pub.publish(ci)
         rate.sleep()
 
 def main():
