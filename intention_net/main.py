@@ -250,7 +250,7 @@ def main(_):
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
     # we choose max_samples to save time for training. For large dataset, we sample 200000 samples each epoch.
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=24, input_frame=flags_obj.input_frame)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=200000, input_frame=flags_obj.input_frame)
     val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000, input_frame=flags_obj.input_frame)
 
     optimizer = get_optimizer()
