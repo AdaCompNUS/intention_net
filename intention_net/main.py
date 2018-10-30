@@ -187,13 +187,13 @@ def main(_):
     flags_obj = flags.FLAGS
     ###################################
     # TensorFlow wizardry
-    config = tf.ConfigProto()
+    #config = tf.ConfigProto()
     # Don't pre-allocate memory; allocate as-needed
-    config.gpu_options.allow_growth = True
+    #config.gpu_options.allow_growth = True
     # Only allow a total of half the GPU memory to be allocated
-    config.gpu_options.per_process_gpu_memory_fraction = 0.5
+    #config.gpu_options.per_process_gpu_memory_fraction = 0.5
     # Create a session with the above options specified.
-    K.tensorflow_backend.set_session(tf.Session(config=config))
+    #K.tensorflow_backend.set_session(tf.Session(config=config))
     ###################################
 
     if flags_obj.val_dir is None:
@@ -244,13 +244,13 @@ def main(_):
     best_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_best_model.h5')
     lastest_model_fn = os.path.join(flags_obj.model_dir, flags_obj.input_frame + '_' + flags_obj.mode + '_latest_model.h5')
     saveBestModel = MyModelCheckpoint(lastest_model_fn, best_model_fn, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', skip=10)
-    tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_graph=False, write_images=True, histogram_freq=2,batch_size=flags_obj.batch_size)
+    tensorboard = TensorBoard(log_dir="logs/{}".format(time()), write_graph=False, write_images=False, batch_size=flags_obj.batch_size)
 
     # callbacks
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
     # we choose max_samples to save time for training. For large dataset, we sample 200000 samples each epoch.
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=200000, input_frame=flags_obj.input_frame)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=24, input_frame=flags_obj.input_frame)
     val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000, input_frame=flags_obj.input_frame)
 
     optimizer = get_optimizer()

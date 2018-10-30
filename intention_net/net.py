@@ -35,7 +35,6 @@ def FeatModel():
     layer_dict = dict([(l.name, l) for l in feat_model.layers])
     inp = feat_model.layers[0].input
     oup = layer_dict['avg_pool'].output
-    oup = Flatten()(oup)
     return Model(inputs=inp, outputs=oup)
 
 def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
