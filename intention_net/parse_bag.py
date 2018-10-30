@@ -60,36 +60,30 @@ def parse_bag(bagfn):
     start = False
 
     def gen(t):
-        img = imgmsg_to_cv2(image)
-        left_96_img = imgmsg_to_cv2(left_96)
-        right_96_img = imgmsg_to_cv2(right_96)
-        front_96_img = imgmsg_to_cv2(front_96)
-        dlm = intention_dlm
-        lpe = imgmsg_to_cv2(intention_lpe)
-        return Munch(t=t, img=img, left_96_img=left_96_img,
-                     right_96_img=right_96_img,
-                     front_96_img=front_96_img,
-                     dlm=dlm, lpe=lpe, speed=speed,
+        return Munch(t=t, img=image, left_96_img=left_96,
+                     right_96_img=right_96,
+                     front_96_img=front_96,
+                     dlm=intention_dlm, lpe=intention_lpe, speed=speed,
                      acc=acc, steer=steer)
 
     for topic, msg, t in bag.read_messages(topics=TOPICS):
         if 'fr_96' in topic:
-            right_96 = msg
+            right_96 = imgmsg_to_cv2(msg)
         elif 'fl_96' in topic:
-            left_96 = msg
+            left_96 = imgmsg_to_cv2(msg)
         elif 'front_96' in topic:
-            front_96 = msg
+            front_96 = imgmsg_to_cv2(msg)
         elif 'speed' in topic:
             speed = msg.linear_acceleration.x
         elif 'dlm' in topic:
             intention_dlm = int(msg.linear_acceleration.x)
         elif 'lpe' in topic:
-            intention_lpe = msg
+            intention_lpe = imgmsg_to_cv2(msg)
         elif 'control' in topic:
             acc = msg.linear_acceleration.x
             steer = msg.angular_velocity.z
         elif '/image' == topic:
-            image = msg
+            image = imgmsg_to_cv2(msg)
             # publish at the same rate of image
             if start:
                 yield gen(t)
@@ -122,10 +116,10 @@ def main_wrapper(data_dir):
     for chunk in partition_all(CHUNK_SIZE, tqdm(it)):
         for c in chunk:
             cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_60', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_96_left', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_left', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_right', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'intention_img', '{}.jpg'.format(c.t)), c.img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_96_left', '{}.jpg'.format(c.t)), c.front_96_img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_left', '{}.jpg'.format(c.t)), c.left_96_img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_right', '{}.jpg'.format(c.t)), c.right_96_img)
+            cv2.imwrite(osp.join(data_dir, gendir, 'intention_img', '{}.jpg'.format(c.t)), c.lpe)
             labelwriter.writerow([c.dlm, c.speed, c.steer, c.acc, c.t, c.t])
 
 if __name__ == '__main__':

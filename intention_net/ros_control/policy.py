@@ -43,7 +43,10 @@ class Policy(object):
         self.model = model
 
     def predict_control(self, image, intention, speed=None):
-        rgb = np.expand_dims(preprocess_input(image), axis=0)
+        if self.input_frame == 'MULTI':
+            rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
+        else:
+            rgb = [np.expand_dims(preprocess_input(image), axis=0)]
 
         if self.mode == 'DLM':
             intention = to_categorical([intention], num_classes=self.num_intentions)
@@ -53,8 +56,8 @@ class Policy(object):
         if speed is not None:
             speed = np.array([[speed]])
 
-            pred_control = self.model.predict([rgb, intention, speed])
+            pred_control = self.model.predict(rgb + [intention, speed])
             return pred_control
         else:
-            pred_control = self.model.predict([rgb, intention])
+            pred_control = self.model.predict(rgb + [intention])
             return pred_control

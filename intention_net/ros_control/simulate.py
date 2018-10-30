@@ -34,7 +34,7 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
         from intention_net.dataset import HuaWeiFinalDataset as Dataset
         print ('=> use HUAWEI data')
 
-    sim_loader = Dataset(data_dir, 1, num_intentions, mode, preprocess=False)
+    sim_loader = Dataset(data_dir, 1, num_intentions, mode, preprocess=False, input_frame=input_frame)
     policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
     ground_truth = []
     pred_control = []
@@ -44,15 +44,29 @@ def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions
     for step, (x, y) in enumerate(tqdm(sim_loader)):
         if (step == len(sim_loader)):
             break
-        img = x[0][0].astype(np.uint8)
-        intention = x[1][0]
-        if mode == 'DLM':
-            intention = np.argmax(intention)
+        if input_frame != "MULTI":
+            img = x[0][0].astype(np.uint8)
+            intention = x[1][0]
+            if mode == 'DLM':
+                intention = np.argmax(intention)
+            else:
+                intention = intention.astype(np.uint8)
+            speed = x[2][0, 0]
+            control = y[0]
+            pred = policy.predict_control(img, intention, speed)[0]
         else:
-            intention = intention.astype(np.uint8)
-        speed = x[2][0, 0]
-        control = y[0]
-        pred = policy.predict_control(img, intention, speed)[0]
+            img_l = x[0][0].astype(np.uint8)
+            img_m = x[1][0].astype(np.uint8)
+            img_r = x[2][0].astype(np.uint8)
+            intention = x[3][0]
+            if mode == 'DLM':
+                intention = np.argmax(intention)
+            else:
+                intention = intention.astype(np.uint8)
+            speed = x[4][0, 0]
+            control = y[0]
+            pred = policy.predict_control([img_l, img_m, img_r], intention, speed)[0]
+
         # scale back
         control[0] *= Dataset.SCALE_STEER
         control[1] *= Dataset.SCALE_ACC
@@ -225,9 +239,12 @@ def main_wrapper(dataset, data_dir, num_intentions=5, mode='DLM'):
         ci.angular_velocity.z = control[0]*Dataset.SCALE_STEER
         # publish topics
         rgb_pub.publish(img)
-        i = Imu()
-        i.linear_acceleration.x = intention
-        intention_pub.publish(i)
+        if mode == 'DLM':
+            i = Imu()
+            i.linear_acceleration.x = intention
+            intention_pub.publish(i)
+        else:
+            intention_pub.publish(intention)
         i = Imu()
         i.linear_acceleration.x = speed
         speed_pub.publish(i)
