@@ -17,9 +17,10 @@ import keras.backend.tensorflow_backend as KTF
 # intention net package
 from intention_net.net import IntentionNet
 from intention_net.dataset import preprocess_input
+import matplotlib.pyplot as plt
 
 class Policy(object):
-    def __init__(self, mode, input_frame, num_control, path, num_intentions, gpu_fraction=0.75):
+    def __init__(self, mode, input_frame, num_control, path, num_intentions, gpu_fraction=0.75, vis=False):
         # set keras session
         config_gpu = tf.ConfigProto()
         config_gpu.gpu_options.allow_growth = True
@@ -32,6 +33,10 @@ class Policy(object):
         self.num_intentions = num_intentions
         self.path = path
         self.load_model()
+        self.vis = vis
+        if self.vis:
+            self.count = 0
+            self.fig = plt.figure()
 
     def load_model(self):
         model = IntentionNet(self.mode, self.input_frame, self.num_control, self.num_intentions)
@@ -42,22 +47,53 @@ class Policy(object):
         print ("=> loaded checkpoint '{}'".format(fn))
         self.model = model
 
-    def predict_control(self, image, intention, speed=None):
+    def predict_control(self, image, intention, speed):
         if self.input_frame == 'MULTI':
             rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
         else:
             rgb = [np.expand_dims(preprocess_input(image), axis=0)]
 
         if self.mode == 'DLM':
-            intention = to_categorical([intention], num_classes=self.num_intentions)
+            i_intention = to_categorical([intention], num_classes=self.num_intentions)
         else:
-            intention = np.expand_dims(preprocess_input(intention), axis=0)
+            i_intention = np.expand_dims(preprocess_input(intention), axis=0)
 
-        if speed is not None:
-            speed = np.array([[speed]])
+        i_speed = np.array([[speed]])
+        pred_control = self.model.predict(rgb + [i_intention, i_speed])
 
-            pred_control = self.model.predict(rgb + [intention, speed])
-            return pred_control
-        else:
-            pred_control = self.model.predict(rgb + [intention])
-            return pred_control
+        if self.vis:
+            self.fig.clf()
+            self.count += 1
+            if self.mode == 'DLM':
+                text = f'speed {speed}\nsteer {2*pred_control[0][0]*np.pi}\nacc {pred_control[0][1]*0.8}\nintention {intention}'
+                if self.input_frame == 'MULTI':
+                    ax0 = self.fig.add_subplot(131)
+                    ax1 = self.fig.add_subplot(132)
+                    ax2 = self.fig.add_subplot(133)
+                    ax0.imshow(image[0])
+                    ax1.imshow(image[1])
+                    ax2.imshow(image[2])
+                else:
+                    ax0 = self.fig.add_subplot(111)
+                    ax0.imshow(image)
+
+            else:
+                text = f'speed {speed}\nsteer {2*pred_control[0][0]*np.pi}\nacc {pred_control[0][1]*0.8}'
+                if self.input_frame == 'MULTI':
+                    ax0 = self.fig.add_subplot(141)
+                    ax1 = self.fig.add_subplot(142)
+                    ax2 = self.fig.add_subplot(143)
+                    ax3 = self.fig.add_subplot(144)
+                    ax0.imshow(image[0])
+                    ax1.imshow(image[1])
+                    ax2.imshow(image[2])
+                    ax3.imshow(intention)
+                else:
+                    ax0 = self.fig.add_subplot(121)
+                    ax1 = self.fig.add_subplot(122)
+                    ax1.imshow(intention)
+
+            self.fig.suptitle(text)
+            self.fig.savefig(f'step_{self.count}.png')
+
+        return pred_control
