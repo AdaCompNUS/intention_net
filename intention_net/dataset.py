@@ -283,7 +283,7 @@ class HuaWeiFinalDataset(BaseDataset):
                     intention = preprocess_input(intention)
 
             extra = [float(lbl[self.car_data_idx['current_velocity']])]
-            control = [float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, float(lbl[self.car_data_idx['ax']]+0.4)/self.SCALE_ACC]
+            control = [float(lbl[self.car_data_idx['steering_wheel_angle']])/self.SCALE_STEER, (float(lbl[self.car_data_idx['ax']])+0.4)/self.SCALE_ACC]
 
             I.append(intention)
             S.append(extra)
