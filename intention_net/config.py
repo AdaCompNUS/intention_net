@@ -41,7 +41,7 @@ flags.DEFINE_string(
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
-    name="optim", short_name="otm", default="adam",
+    name="optim", short_name="otm", default="rmsprop",
     help=help_wrap("Optimizer type for training"))
 
 flags.DEFINE_integer(
@@ -107,7 +107,7 @@ def load_config(cls):
 class IntentionNetConfig(object):
     # default params
     train_epochs=300
-    batch_size=8
+    batch_size=16
 
     # Constants should start from _ in order not to get conflict with flags
     _C = edict()
