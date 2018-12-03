@@ -94,6 +94,6 @@ class Policy(object):
                     ax1.imshow(intention)
 
             self.fig.suptitle(text)
-            self.fig.savefig(f'step_{self.count}.png')
+            self.fig.savefig(f'debug/step_{self.count:08d}.png')
 
         return pred_control

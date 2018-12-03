@@ -84,6 +84,8 @@ def parse_bag(bagfn):
             steer = msg.angular_velocity.z
         elif '/image' == topic:
             image = imgmsg_to_cv2(msg)
+            # add support for only image
+            right_96 = left_96 = front_96 = image
             # publish at the same rate of image
             if start:
                 yield gen(t)

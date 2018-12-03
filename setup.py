@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="intention_net",
-    version="1.0.1",
+    version="2.0.1",
     author="Gao Wei",
     author_email="qazmichaelgw@gmail.com",
     description="Intention Net Package",

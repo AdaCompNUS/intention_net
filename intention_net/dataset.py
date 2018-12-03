@@ -188,6 +188,12 @@ class HuaWeiFinalDataset(BaseDataset):
     LEFT_TURN = 2
     RIGHT_TURN = 3
     LANE_FOLLOW = 4
+    # intention wrapper
+    INTENTION = {
+            STRAIGHT_FORWARD: 0,
+            LEFT_TURN: 1,
+            RIGHT_TURN: 2
+            }
     # use to normalize regression data
     SCALE_ACC = 0.8
     SCALE_STEER = 2*np.pi
@@ -276,7 +282,11 @@ class HuaWeiFinalDataset(BaseDataset):
                 X.append(img)
 
             if self.mode == 'DLM':
-                intention = to_categorical(int(lbl[self.car_data_idx['intention_type']]), num_classes=self.num_intentions)
+                # add data augmentation
+                lbl_intention = self.INTENTION[int(lbl[self.car_data_idx['intention_type']])]
+                if float(lbl[self.car_data_idx['steering_wheel_angle']]) < 0.05:
+                    lbl_intention = np.random.randint(self.num_intentions)
+                intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
             else:
                 intention = img_to_array(load_img(self.list_lpes[idx], target_size=self.target_size))
                 if self.preprocess:
