@@ -22,12 +22,10 @@ from intention_net.dataset import HuaWeiFinalDataset as Dataset
 SCREEN_SCALE = 2
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
-INTENTION = {
+VIS_INTENTION = {
     0: 'STRAIGHT_FORWARD',
-    1: 'STRAIGHT_BACK',
-    2: 'LEFT_TURN',
-    3: 'RIGHT_TURN',
-    4: 'LANE_FOLLOW',
+    1: 'LEFT_TURN',
+    2: 'RIGHT_TURN',
 }
 
 def msg_to_img(msg, decoding='rgb8'):
@@ -101,7 +99,7 @@ class Controller(object):
         self.intention = msg_to_img(msg)
 
     def cb_dlm_intention(self, msg):
-        self.intention = int(msg.linear_acceleration.x)
+        self.intention = Dataset.INTENTION[int(msg.linear_acceleration.x)]
 
     def cb_speed(self, msg):
         self.speed = msg.linear_acceleration.x
@@ -214,7 +212,7 @@ class Controller(object):
             self.text_to_screen('Speed: {:.4f} m/s'.format(self.speed), pos=(150, WINDOW_HEIGHT-30))
         if self.intention is not None:
             if self._mode == 'DLM':
-                self.text_to_screen(INTENTION[self.intention])
+                self.text_to_screen(VIS_INTENTION[self.intention])
             else:
                 surface = pygame.surfarray.make_surface(self.intention.swapaxes(0, 1))
                 self._display.blit(surface, (SCREEN_SCALE*(WINDOW_WIDTH-self.intention.shape[0])/2, 0))
@@ -245,7 +243,7 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(model_dir, mode, input_frame, num_intentions=5, scale_x=1, scale_z=1, rate=28):
+def run_wrapper(model_dir, mode, input_frame, num_intentions=3, scale_x=1, scale_z=1, rate=28):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     policy = Policy(mode, input_frame, 2, model_dir, num_intentions)

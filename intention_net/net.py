@@ -89,7 +89,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
         speed_feat = FCModel(1)(speed_input)
         feat = concatenate(rgb_feat + [lpe_feat, speed_feat])
         out = Dropout(DROPOUT)(feat)
-        out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+        out = Dense(2048, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
         out = Dropout(DROPOUT)(out)
         control = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
 

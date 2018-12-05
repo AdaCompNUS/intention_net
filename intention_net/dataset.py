@@ -284,8 +284,9 @@ class HuaWeiFinalDataset(BaseDataset):
             if self.mode == 'DLM':
                 # add data augmentation
                 lbl_intention = self.INTENTION[int(lbl[self.car_data_idx['intention_type']])]
-                if float(lbl[self.car_data_idx['steering_wheel_angle']]) < 0.05:
-                    lbl_intention = np.random.randint(self.num_intentions)
+                if self.preprocess:
+                    if float(lbl[self.car_data_idx['steering_wheel_angle']]) < 0.05:
+                        lbl_intention = np.random.randint(self.num_intentions)
                 intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
             else:
                 intention = img_to_array(load_img(self.list_lpes[idx], target_size=self.target_size))

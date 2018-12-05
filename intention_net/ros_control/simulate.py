@@ -23,7 +23,7 @@ from policy import Policy
 # include quantitative metrics
 from intention_net.statistics import SmoothStatistics as Stats
 
-NUM_INTENTIONS = 5
+NUM_INTENTIONS = 3
 
 def plot_wrapper(dataset, data_dir, mode, input_frame, model_dir, num_intentions=NUM_INTENTIONS):
     import matplotlib.pyplot as plt
