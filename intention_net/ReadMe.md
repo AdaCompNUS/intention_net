@@ -37,7 +37,7 @@ mkdir src && cd src
 git clone https://github.com/ros-perception/vision_opencv.git
 # resolve link error of python 3 before compile.
 cd /usr/lib/x86_64-linux-gnu/
-sudo ln -s libboost_python-py3x.so libboost_python3.so
+sudo ln -s libboost_python-py3x.so libboost_python3.so # replace 'x' with the python3 version in system
 # compile
 cd ~/catkin_cv
 catkin_make
