@@ -1,5 +1,5 @@
 """
-Generate data from huawei rosbag
+Generate data from pioneer rosbag
 """
 import cv2
 import fire
@@ -18,26 +18,34 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 from toolz import partition_all
 from itertools import chain
+
 # import local
 from threadedgenerator import ThreadedGenerator
 
-# Topics for register
-CAMERA_IMG = '/image'
-CAMERA_FRONT_96 = '/front_96_image'
-CAMERA_LEFT_96 = '/fl_96_image'
-CAMERA_RIGHT_96 = '/fr_96_image'
-INTENTION_DLM = '/intention_dlm'
-INTENTION_LPE = '/intention_lpe'
-SPEED = '/speed'
-CONTROL = '/control'
-TOPICS = [CAMERA_IMG,
-          CAMERA_FRONT_96,
-          CAMERA_LEFT_96,
-          CAMERA_RIGHT_96,
-          INTENTION_DLM,
-          INTENTION_LPE,
-          SPEED,
-          CONTROL]
+SENSORS = ['mynt_eye', 'web_cam']
+
+MYNT_EYE = {
+    'RGBS' : ['rgb_front_left', 'rgb_front_right'],
+    'DEPTHS' : ['depth_front'],
+}
+
+WEB_CAM = {
+    'RGBS' : ['/train/image_raw'],
+    'DEPTHS' : []
+}
+
+SENSOR_TOPIC = {
+    SENSORS[0] : MYNT_EYE,
+    SENSORS[1] : WEB_CAM
+}
+
+#INTENTION = '/train/intention'
+INTENTION = '/test_intention'
+CONTROL = '/RosAria/cmd_vel'
+
+IMG_TOPICS = []
+TOPICS = []
+TOPICS_IDX = {}
 
 # CHUNK_SIZE for parallel parsing
 CHUNK_SIZE = 128
@@ -46,83 +54,88 @@ def imgmsg_to_cv2(msg):
     return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
 def parse_bag(bagfn):
-    print ('processing {} now'.format(bagfn))
+    print (f'processing {bagfn} now')
     bag = rosbag.Bag(bagfn)
-    image = None
-    left_96 = None
-    right_96 = None
-    front_96 = None
-    intention_dlm = None
-    intention_lpe = None
-    speed = None
-    acc = None
+    imgs = [None]*len(IMG_TOPICS)
+    vel = None
     steer = None
     start = False
 
-    def gen(t):
-        return Munch(t=t, img=image, left_96_img=left_96,
-                     right_96_img=right_96,
-                     front_96_img=front_96,
-                     dlm=intention_dlm, lpe=intention_lpe, speed=speed,
-                     acc=acc, steer=steer)
+    print ('img topics', IMG_TOPICS)
+    print ('topics', TOPICS)
 
-    for topic, msg, t in bag.read_messages(topics=TOPICS):
-        if 'fr_96' in topic:
-            right_96 = imgmsg_to_cv2(msg)
-        elif 'fl_96' in topic:
-            left_96 = imgmsg_to_cv2(msg)
-        elif 'front_96' in topic:
-            front_96 = imgmsg_to_cv2(msg)
-        elif 'speed' in topic:
-            speed = msg.linear_acceleration.x
-        elif 'dlm' in topic:
-            intention_dlm = int(msg.linear_acceleration.x)
-        elif 'lpe' in topic:
-            intention_lpe = imgmsg_to_cv2(msg)
+    def gen(frame):
+        return Munch(frame=frame, imgs=imgs,
+                     vel=vel, steer=steer)
+
+    msg_cnt = [bag.get_message_count(topic) for topic in IMG_TOPICS]
+    least_img_idx = msg_cnt.index(min(msg_cnt))
+
+    for topic, msg, frame in bag.read_messages(topics=TOPICS):
+        if topic in IMG_TOPICS:
+            idx = TOPICS_IDX[topic]
+            imgs[idx] = imgmsg_to_cv2(msg)
+            if idx == least_img_idx:
+                if start:
+                    yield gen(frame)
+                else:
+                    if sum([1 for it in imgs if it is None]) == 0:
+                        start = True
         elif 'control' in topic:
-            acc = msg.linear_acceleration.x
+            vel = msg.linear_acceleration.x
             steer = msg.angular_velocity.z
-        elif '/image' == topic:
-            image = imgmsg_to_cv2(msg)
-            # add support for only image
-            right_96 = left_96 = front_96 = image
-            # publish at the same rate of image
-            if start:
-                yield gen(t)
-
-        if image is not None and left_96 is not None and right_96 is not None and front_96 is not None and speed is not None and acc is not None and intention_dlm is not None and intention_lpe is not None:
-            start = True
 
     bag.close()
 
-def main_wrapper(data_dir):
+def main_wrapper(data_dir, sensor='web_cam', intention_type='dlm'):
+    global IMG_TOPICS
+    global TOPICS
+    global TOPICS_IDX
+    assert (sensor in SENSORS), f'Must be valid sensor in {SENSORS}'
+    RGBS = SENSOR_TOPIC[sensor]['RGBS']
+    DEPTHS = SENSOR_TOPIC[sensor]['DEPTHS']
     bagfns = glob.glob(data_dir + '/*.bag')
     print ('bags:', bagfns)
     bags = chain(*[parse_bag(bagfn) for bagfn in bagfns])
     it = ThreadedGenerator(bags, queue_maxsize=6500)
     # make dirs for images
-    gendir = 'route_gendata'
-    data_dir = osp.join(data_dir, 'data')
+    gendir = 'data'
     if os.path.exists(osp.join(data_dir, gendir)) and os.path.isdir(osp.join(data_dir, gendir)):
         shutil.rmtree(osp.join(data_dir, gendir))
     os.mkdir(osp.join(data_dir, gendir))
-    os.mkdir(osp.join(data_dir, gendir, 'camera_img'))
-    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'front_60'))
-    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'front_96_left'))
-    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'side_96_left'))
-    os.mkdir(osp.join(data_dir, gendir, 'camera_img', 'side_96_right'))
-    os.mkdir(osp.join(data_dir, gendir, 'intention_img'))
-    f = open(osp.join(data_dir, gendir, 'LabelData_VehicleData_PRT.txt'), 'w')
+    topic_save_path = []
+    for idx, rgb_topic in enumerate(RGBS):
+        fn = osp.join(data_dir, gendir, f'rgb_{idx}')
+        os.mkdir(fn)
+        TOPICS.append(rgb_topic)
+        TOPICS_IDX[rgb_topic] = len(TOPICS) - 1
+        topic_save_path.append(fn)
+    for idx, depth_topic in enumerate(DEPTHS):
+        fn = osp.join(data_dir, gendir, f'depth_{idx}')
+        os.mkdir(fn)
+        TOPICS.append(depth_ropic)
+        TOPICS_IDX[depth_topic] = len(TOPICS) - 1
+        topic_save_path.append(fn)
+    if intention_type == 'lpe':
+        fn = osp.join(data_dir, gendir, 'intention_img')
+        os.mkdir(fn)
+        TOPICS.append(INTENTION)
+        TOPICS_IDX[INTENTION] = len(TOPICS) - 1
+        topic_save_path.append(fn)
+        IMG_TOPICS = TOPICS[:]
+    else:
+        IMG_TOPICS = TOPICS[:]
+        TOPICS.append(INTENTION)
+    TOPICS.append(CONTROL)
+
+    f = open(osp.join(data_dir, gendir, 'label.txt'), 'w')
     labelwriter = csv.writer(f, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    labelwriter.writerow(['intention_type', 'current_velocity', 'steering_wheel_angle', 'ax', 'img_front_60_frame', 'intention_img'])
+    labelwriter.writerow(['frame', 'intention_type', 'current_velocity', 'steering_wheel_angle'])
     for chunk in partition_all(CHUNK_SIZE, tqdm(it)):
         for c in chunk:
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_60', '{}.jpg'.format(c.t)), c.img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'front_96_left', '{}.jpg'.format(c.t)), c.front_96_img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_left', '{}.jpg'.format(c.t)), c.left_96_img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'camera_img', 'side_96_right', '{}.jpg'.format(c.t)), c.right_96_img)
-            cv2.imwrite(osp.join(data_dir, gendir, 'intention_img', '{}.jpg'.format(c.t)), c.lpe)
-            labelwriter.writerow([c.dlm, c.speed, c.steer, c.acc, c.t, c.t])
+            for idx, fn in enumerate(topic_save_path):
+                cv2.imwrite(osp.join(fn, f'{c.frame}.jpg'), c.imgs[idx])
+            labelwriter.writerow([c.frame, intention_type, c.vel, c.steer])
 
 if __name__ == '__main__':
     fire.Fire(main_wrapper)
