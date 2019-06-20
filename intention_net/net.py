@@ -58,9 +58,10 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
         assert (num_intentions != -1), "Number of intentions must be bigger than one"
         intention_input = Input(shape=(num_intentions,))
         intention_feat = FCModel(num_intentions)(intention_input)
-        speed_input = Input(shape=(1,))
-        speed_feat = FCModel(1)(speed_input)
-        feat = concatenate(rgb_feat + [intention_feat, speed_feat])
+        #speed_input = Input(shape=(1,))
+        #speed_feat = FCModel(1)(speed_input)
+        #feat = concatenate(rgb_feat + [intention_feat, speed_feat])
+        feat = concatenate(rgb_feat + [intention_feat])
         # controls
         outs = []
         for i in range(num_intentions):
@@ -73,7 +74,8 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
         control = Lambda(filter_control, output_shape=(num_control, ))(outs)
 
         if input_frame != 'MULTI':
-            model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
+            #model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
+            model = Model(inputs=[rgb_input, intention_input], outputs=control)
         else:
             model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, intention_input, speed_input], outputs=control)
 

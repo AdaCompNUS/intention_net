@@ -55,6 +55,87 @@ class BaseDataset(keras.utils.Sequence):
         """Denote number of batches per epoch"""
         return self.num_samples // self.batch_size
 
+class PioneerDataset(BaseDataset):
+    INTENTION_MAPPING = {
+        'left' : 0,
+        'right': 1,
+        'forward':2,
+        'stop':3
+    }
+    # only add dlm support here, you can extend to lpe easily refering to the HuaweiFinalDataset example
+    NUM_CONTROL = 2
+
+    # use to normalize regression data
+    SCALE_VEL = 0.5
+    SCALE_STEER = 0.5
+
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=True, max_samples=None, preprocess=True, input_frame='NORMAL'):
+        super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess, input_frame)
+
+    def init(self):
+        base_dir = osp.join(self.data_dir, 'data')
+        self.data_header, self.data = self.read_csv(os.path.join(base_dir, 'label.txt'))
+        self.num_samples = len(self.data)
+
+        # reverse header index
+        self.data_idx = {}
+        for k, v in enumerate(self.data_header):
+            self.data_idx[v] = k
+
+        self.images = []
+        for datum in self.data:
+            fn = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
+            self.images.append(fn)
+
+    def __getitem__(self, index):
+        """
+        Generate one batch of data
+        """
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        X = []
+        I = []
+        Y = []
+        for idx in indexes:
+            lbl = self.data[idx]
+            img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
+            if self.preprocess:
+                img = preprocess_input(img)
+            X.append(img)
+
+            if self.mode == 'DLM':
+                lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
+                intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
+
+            control = [float(lbl[self.data_idx['current_velocity']])/self.SCALE_VEL, (float(lbl[self.data_idx['steering_wheel_angle']]))/self.SCALE_STEER]
+            I.append(intention)
+            Y.append(control)
+
+        X = np.array(X)
+        I = np.array(I)
+        Y = np.array(Y)
+        return [X, I], Y
+
+    def read_csv(self, fn, has_header=True):
+        f = open(fn)
+        reader = csv.reader(f, delimiter=' ')
+        header = None
+        data = []
+        if has_header:
+            row_num = 0
+            for row in reader:
+                if row_num == 0:
+                    header = row
+                    row_num += 1
+                else:
+                    data.append(row)
+                    row_num += 1
+        else:
+            for row in reader:
+                data.append(row)
+
+        # drop the last row because sometimes the last row is not complete
+        return header, data[:-1]
+
 class CarlaSimDataset(BaseDataset):
     # intention mapping
     INTENTION_MAPPING = {}

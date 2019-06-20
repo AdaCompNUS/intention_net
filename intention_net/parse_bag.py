@@ -53,20 +53,20 @@ CHUNK_SIZE = 128
 def imgmsg_to_cv2(msg):
     return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
-def parse_bag(bagfn):
+def parse_bag(bagfn, intention_type):
     print (f'processing {bagfn} now')
     bag = rosbag.Bag(bagfn)
     imgs = [None]*len(IMG_TOPICS)
     vel = None
     steer = None
     start = False
+    dlm = ''
 
     print ('img topics', IMG_TOPICS)
     print ('topics', TOPICS)
 
     def gen(frame):
-        return Munch(frame=frame, imgs=imgs,
-                     vel=vel, steer=steer)
+        return Munch(frame=frame, imgs=imgs, vel=vel, steer=steer, dlm=dlm)
 
     msg_cnt = [bag.get_message_count(topic) for topic in IMG_TOPICS]
     least_img_idx = msg_cnt.index(min(msg_cnt))
@@ -81,9 +81,11 @@ def parse_bag(bagfn):
                 else:
                     if sum([1 for it in imgs if it is None]) == 0:
                         start = True
-        elif 'control' in topic:
-            vel = msg.linear_acceleration.x
-            steer = msg.angular_velocity.z
+        elif topic == CONTROL:
+            vel = msg.linear.x
+            steer = msg.angular.z
+        elif intention_type == 'dlm' and topic == INTENTION:
+            dlm = msg.data
 
     bag.close()
 
@@ -96,7 +98,7 @@ def main_wrapper(data_dir, sensor='web_cam', intention_type='dlm'):
     DEPTHS = SENSOR_TOPIC[sensor]['DEPTHS']
     bagfns = glob.glob(data_dir + '/*.bag')
     print ('bags:', bagfns)
-    bags = chain(*[parse_bag(bagfn) for bagfn in bagfns])
+    bags = chain(*[parse_bag(bagfn, intention_type) for bagfn in bagfns])
     it = ThreadedGenerator(bags, queue_maxsize=6500)
     # make dirs for images
     gendir = 'data'
@@ -130,12 +132,12 @@ def main_wrapper(data_dir, sensor='web_cam', intention_type='dlm'):
 
     f = open(osp.join(data_dir, gendir, 'label.txt'), 'w')
     labelwriter = csv.writer(f, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    labelwriter.writerow(['frame', 'intention_type', 'current_velocity', 'steering_wheel_angle'])
+    labelwriter.writerow(['frame', 'intention_type', 'current_velocity', 'steering_wheel_angle', 'dlm'])
     for chunk in partition_all(CHUNK_SIZE, tqdm(it)):
         for c in chunk:
             for idx, fn in enumerate(topic_save_path):
                 cv2.imwrite(osp.join(fn, f'{c.frame}.jpg'), c.imgs[idx])
-            labelwriter.writerow([c.frame, intention_type, c.vel, c.steer])
+            labelwriter.writerow([c.frame, intention_type, c.vel, c.steer, c.dlm])
 
 if __name__ == '__main__':
     fire.Fire(main_wrapper)

@@ -16,18 +16,17 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 import cv2
 from cv_bridge import CvBridge
-from intention_net.dataset import HuaWeiFinalDataset as Dataset
+from intention_net.dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
-SCREEN_SCALE = 2
+SCREEN_SCALE = 1
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
 INTENTION = {
-    0: 'STRAIGHT_FORWARD',
-    1: 'STRAIGHT_BACK',
-    2: 'LEFT_TURN',
-    3: 'RIGHT_TURN',
-    4: 'LANE_FOLLOW',
+    0: 'LEFT',
+    1: 'RIGHT',
+    2: 'FORWARD',
+    3: 'STOP',
 }
 
 class Timer(object):
@@ -70,7 +69,6 @@ class Controller(object):
             rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1)
         rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
         # publish control
@@ -85,15 +83,12 @@ class Controller(object):
     def cb_lpe_intention(self, msg):
         self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
-    def cb_speed(self, msg):
-        self.speed = msg.data
-
     def cb_labeled_control(self, msg):
         self.labeled_control = msg
 
     def cb_joy(self, data):
         self.tele_twist.linear.x = self._scale_x * data.axes[JOY_MAPPING['axes']['left_stick_ud']]
-        self.tele_twist.angular.z = -self._scale_z * data.axes[JOY_MAPPING['axes']['left_stick_lr']]
+        self.tele_twist.angular.z = self._scale_z * data.axes[JOY_MAPPING['axes']['left_stick_lr']]
 
         # parse control key
         if data.buttons[JOY_MAPPING['buttons']['A']] == 1:
@@ -111,13 +106,13 @@ class Controller(object):
         if self.key == 'q':
             sys.exit(-1)
         if self._enable_auto_control:
-            if self.image is not None and self.intention is not None and self.speed is not None:
+            if self.image is not None and self.intention is not None:
                 #start = time.time()
-                pred_control = policy.predict_control(self.image, self.intention, self.speed)[0]
+                pred_control = policy.predict_control(self.image, self.intention)[0]
                 #end = time.time()
                 #print ('=> predict time ', end - start)
-                self.tele_twist.linear.x = pred_control[1]*Dataset.SCALE_ACC
-                self.tele_twist.angular.z = pred_control[0]*Dataset.SCALE_STEER
+                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
+                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
         # publish control
         self.control_pub.publish(self.tele_twist)
 
@@ -161,8 +156,6 @@ class Controller(object):
             array = cv2.resize(self.image, (WINDOW_WIDTH*SCREEN_SCALE, WINDOW_HEIGHT*SCREEN_SCALE))
             surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
             self._display.blit(surface, (0, 0))
-        if self.speed is not None:
-            self.text_to_screen('Speed: {:.4f} m/s'.format(self.speed), pos=(150, WINDOW_HEIGHT-30))
         if self.intention is not None:
             if self._mode == 'DLM':
                 self.text_to_screen(INTENTION[self.intention])

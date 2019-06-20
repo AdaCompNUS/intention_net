@@ -145,8 +145,8 @@ def define_intention_net_flags():
             help=help_wrap("Intention Net mode to run"))
 
     flags.DEFINE_enum(
-            name='dataset', short_name='ds', default="CARLA",
-            enum_values=['CARLA_SIM', 'CARLA', 'HUAWEI'],
+            name='dataset', short_name='ds', default="PIONEER",
+            enum_values=['CARLA_SIM', 'CARLA', 'HUAWEI', 'PIONEER'],
             help=help_wrap("dataset to load for training."))
 
     global cfg
@@ -211,6 +211,9 @@ def main(_):
     elif flags_obj.dataset == 'CARLA_SIM':
         from dataset import CarlaSimDataset as Dataset
         print ('=> using self-collected CARLA data')
+    elif flags_obj.dataset == 'PIONEER':
+        from dataset import PioneerDataset as Dataset
+        print ('=> using pioneer data')
     else:
         from dataset import HuaWeiFinalDataset as Dataset
         print ('=> using HUAWEI data')
