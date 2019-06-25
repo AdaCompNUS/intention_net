@@ -29,6 +29,9 @@ INTENTION = {
     3: 'STOP',
 }
 
+IMG_TOPIC = '/mynteye/left/image_raw'
+CONTROL_TOPIC = '/RosAria/cmd_vel'
+
 class Timer(object):
     def __init__(self):
         self.step = 0
@@ -64,7 +67,7 @@ class Controller(object):
         self.labeled_control = None
         self.key = None
         # subscribe ros messages
-        rospy.Subscriber('/image', Image, self.cb_image, queue_size=1, buff_size=2**10)
+        rospy.Subscriber(IMG_TOPIC, Image, self.cb_image, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
             rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
         else:
@@ -72,7 +75,7 @@ class Controller(object):
         rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
         # publish control
-        self.control_pub = rospy.Publisher('/control', Twist, queue_size=1)
+        self.control_pub = rospy.Publisher(CONTROL_TOPIC, Twist, queue_size=1)
 
     def cb_image(self, msg):
         self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -189,10 +192,14 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(model_dir, mode, input_frame, num_intentions=5, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode, input_frame, model_dir=None,  num_intentions=5, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
-    policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
+    if model_dir == None:
+        policy = None
+    else:    
+        policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
+    
     controller.execute(policy)
 
 def main():
