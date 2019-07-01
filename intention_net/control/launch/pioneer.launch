@@ -3,19 +3,21 @@
     <!-- LAUNCH PIONEER ROBOT -->
     <node pkg="rosaria" type="RosAria" name="RosAria">  
         <param name="port" value="/dev/ttyUSB0" />
+        <param name="odom_frame" value="Aria_odom"/>
+        <param name="base_link_frame" value="Aria_base_link"/>
     </node>
 
     <!-- LAUNCH JOYSTICK -->
-    <include file="/mnt/intention_net/ros_control/launch/joy.launch"/>
+    <include file="/mnt/intention_net/control/launch/joy.launch"/>
 
     <!-- LAUNCH MYNTEYE SENSOR -->
-    <include file="/mnt/intention_net/ros_control/launch/mynteye.launch"/>
+    <include file="/mnt/intention_net/control/launch/mynteye.launch"/>
 
-    <!-- LAUNCH ROBOT_LOCALIZATION EKF NODE -->
-    <!--include file="mnt/intention_net/ros_control/launch/ekf.launch"/-->
-
-    <!-- PUBLISH TF BASE_LINK ==> MYNTEYE_LINK -->
+    <!-- PUBLISH TF BASE_LINK ==> MYNTEYE_LINK
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye" args="0 0 0.1397 0 0 0 base_link mynteye_link 100"/>
+    -->
+    <!-- LAUNCH ROBOT_LOCALIZATION EKF NODE -->
+    <include file="/mnt/intention_net/control/launch/ekf_template.launch"/>
 
     <!-- ROSBAG RECORD NODE-->
     <arg name="record"  default="False"/> <!-- Pass record:= True to enable recording-->

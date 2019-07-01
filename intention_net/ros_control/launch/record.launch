@@ -1,3 +1,0 @@
-<launch>
- <node pkg="rosbag" type="record" name="train_recorder" output="screen" args="-o /home/ashwinram/datacenter/ -a " />
-</launch>

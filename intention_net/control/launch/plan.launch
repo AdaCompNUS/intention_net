@@ -14,6 +14,6 @@
 
     <!-- PIONEER ROBOT MODEL -->
     <include file="$(find p2os_urdf)/launch/pioneer3dx_urdf.launch"/>
-
-    <node pkg="rviz" type="rviz" name="rviz" args="-d /mnt/intention_net/ros_control/launch/pioneer.rviz" />
+    
+    <node pkg="rviz" type="rviz" name="rviz" args="-d /mnt/intention_net/control/launch/pioneer.rviz" />
 </launch>
