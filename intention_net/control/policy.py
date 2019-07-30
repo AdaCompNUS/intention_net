@@ -17,6 +17,7 @@ import keras.backend.tensorflow_backend as KTF
 # intention net package
 from intention_net.net import IntentionNet
 from intention_net.dataset import preprocess_input
+from intention_net.dataset import PioneerDataset as Dataset
 import matplotlib.pyplot as plt
 
 class Policy(object):
@@ -51,16 +52,21 @@ class Policy(object):
         if self.input_frame == 'MULTI':
             rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
         else:
-            rgb = [np.expand_dims(preprocess_input(image), axis=0)]
+            #rgb = [np.expand_dims(preprocess_input(image), axis=0)]
+            rgb = np.expand_dims(preprocess_input(image), axis=0)
+            print(rgb.shape)
 
         if self.mode == 'DLM':
+            intention = Dataset.INTENTION_MAPPING[intention]
+            print('intention used for auto control: %s'%intention)
             i_intention = to_categorical([intention], num_classes=self.num_intentions)
         else:
             i_intention = np.expand_dims(preprocess_input(intention), axis=0)
 
         i_speed = np.array([[speed]])
-        pred_control = self.model.predict(rgb + [i_intention, i_speed])
-
+        #pred_control = self.model.predict(rgb + [i_intention, i_speed])
+        pred_control = self.model.predict([rgb,i_intention])
+        
         if self.vis:
             self.fig.clf()
             self.count += 1

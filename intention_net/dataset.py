@@ -57,10 +57,14 @@ class BaseDataset(keras.utils.Sequence):
 
 class PioneerDataset(BaseDataset):
     INTENTION_MAPPING = {
-        'left' : 0,
-        'right': 1,
-        'forward':2,
-        'stop':3
+        # 'left' : 0,
+        # 'right': 1,
+        # 'forward':2,
+        # 'stop':3
+        'forward':0,
+        'stop':1,
+        'left':2,
+        'right':3,
     }
     # only add dlm support here, you can extend to lpe easily refering to the HuaweiFinalDataset example
     NUM_CONTROL = 2

@@ -15,7 +15,7 @@ help_wrap = functools.partial(flags.text_wrap, length=80, indent="",
 absl_app.HelpshortFlag.SHORT_NAME = "h"
 # base flags
 flags.DEFINE_string(
-    name="data_dir", short_name="dd", default="/tmp",
+    name="data_dir", short_name="dd", default="/data",
     help=help_wrap("The location of the input data."))
 
 flags.DEFINE_string(
@@ -23,7 +23,7 @@ flags.DEFINE_string(
     help=help_wrap("The location of the validation data."))
 
 flags.DEFINE_string(
-    name="model_dir", short_name="md", default="/tmp",
+    name="model_dir", short_name="md", default="/data/model",
     help=help_wrap("The location of the model checkpoint data."))
 
 flags.DEFINE_string(
