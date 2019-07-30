@@ -11,12 +11,13 @@ from joy_teleop import JOY_MAPPING
 from policy import Policy
 # ros packages
 import rospy
-from sensor_msgs.msg import Joy, Image
+from sensor_msgs.msg import Joy, Image, Imu
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Int32, Float32
+from std_msgs.msg import Int32, Float32, String
+from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
-from intention_net.dataset import HuaWeiFinalDataset as Dataset
+from intention_net.dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
 SCREEN_SCALE = 1
@@ -52,33 +53,67 @@ class Timer(object):
 class Controller(object):
     tele_twist = Twist()
     def __init__(self, mode, scale_x, scale_z, rate):
+        global INTENTION
+        self.INTENTION_MAPPING = INTENTION
         self._mode = mode
         self._scale_x = scale_x
         self._scale_z = scale_z
         self._timer = Timer()
         self._rate = rospy.Rate(rate)
         self._enable_auto_control = False
+        self.current_control = None 
+
         # callback data store
         self.image = None
+        self.left_image = None 
+        self.right_image = None 
+        self.depth_image = None 
         self.intention = None
+        self.manual_intention = self.INTENTION_MAPPING[0]
+        self.imu = None
+        self.odom = None
         self.speed = None
         self.labeled_control = None
         self.key = None
+        self.training = False
+
         # subscribe ros messages
-        rospy.Subscriber('/mynteye/left/image_raw', Image, self.cb_image, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye/left/image_raw', Image, self.cb_left_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye/right/image_raw', Image, self.cb_right_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye/depth/image_raw', Image, self.cb_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
-            rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/test_intention', String, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1)
+        rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
+        rospy.Subscriber('/odometry/filtered',Odometry,self.cb_odom,queue_size=1,buff_size=2**10)
+        rospy.Subscriber('/mynteye/imu/data_raw',Imu,self.cb_imu,queue_size=1,buff_size=2**10)
         rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
+        
         # publish control
         self.control_pub = rospy.Publisher('/RosAria/cmd_vel', Twist, queue_size=1)
 
-    def cb_image(self, msg):
+        # publishing as training data
+        self.pub_teleop_vel = rospy.Publisher('/train/cmd_vel', Twist, queue_size=1)
+        self.pub_left_img = rospy.Publisher('/train/left_img', Image, queue_size=1)
+        self.pub_right_img = rospy.Publisher('/train/right_img',Image, queue_size=1)
+        self.pub_depth_img = rospy.Publisher('/train/depth_img', Image, queue_size=1)
+        self.pub_intention = rospy.Publisher('/train/intention', Int32, queue_size=1)
+        self.pub_imu = rospy.Publisher('/train/imu', Imu, queue_size=1)
+        self.pub_odom = rospy.Publisher('/train/odometry/filtered', Odometry, queue_size=1)
+        self.pub_manual_intention  = rospy.Publisher('/train/manual_intention',String,queue_size=1)
+
+    def cb_left_img(self, msg):
+        self.left_img = msg
         self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
+    def cb_right_img(self,msg):
+        self.right_img = msg
+
+    def cb_depth_img(self,msg):
+        self.depth_img = msg
+    
     def cb_dlm_intention(self, msg):
         self.intention = msg.data
 
@@ -91,6 +126,12 @@ class Controller(object):
     def cb_labeled_control(self, msg):
         self.labeled_control = msg
 
+    def cb_imu(self,msg):
+        self.imu = msg
+
+    def cb_odom(self,msg):
+        self.odom = msg
+
     def cb_joy(self, data):
         self.tele_twist.linear.x = self._scale_x * data.axes[JOY_MAPPING['axes']['left_stick_ud']]
         self.tele_twist.angular.z = self._scale_z * data.axes[JOY_MAPPING['axes']['left_stick_lr']]
@@ -98,10 +139,32 @@ class Controller(object):
         # parse control key
         if data.buttons[JOY_MAPPING['buttons']['A']] == 1:
             self._enable_auto_control = True
+            print('Auto control')
         if data.buttons[JOY_MAPPING['buttons']['B']] == 1:
             self._enable_auto_control = False
+            print('Manual control')
         if data.buttons[JOY_MAPPING['buttons']['back']] == 1:
             self.key = 'q'
+        if data.buttons[JOY_MAPPING['buttons']['start']] == 1:
+            self.key = 't'
+            print('toggle training mode to: %s'%(not self.training))
+        # manual control the intention
+        #STRAIGHT_FORWARD
+        if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
+            self.manual_intention =  list(Dataset.INTENTION_MAPPING)[0]
+            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[0]))
+        #STOP
+        if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
+            self.manual_intention = list(Dataset.INTENTION_MAPPING)[1]
+            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[1]))
+        #LEFT_TURN
+        if data.buttons[JOY_MAPPING['buttons']['lt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[2]:
+            self.manual_intention = list(Dataset.INTENTION_MAPPING)[2]
+            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[2]))
+        #RIGHT_TURN
+        if data.buttons[JOY_MAPPING['buttons']['rt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[3]:
+            self.manual_intention = list(Dataset.INTENTION_MAPPING)[3]
+            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[3]))
 
     def _on_loop(self, policy):
         """
@@ -110,16 +173,37 @@ class Controller(object):
         self._timer.tick()
         if self.key == 'q':
             sys.exit(-1)
+        if self.key == 't':
+            self.training = not self.training
+            self.key = ''
         if self._enable_auto_control:
-            if self.image is not None and self.intention is not None and self.speed is not None:
+            if self.image is not None and self.intention is not None:
                 #start = time.time()
                 pred_control = policy.predict_control(self.image, self.intention, self.speed)[0]
                 #end = time.time()
                 #print ('=> predict time ', end - start)
-                self.tele_twist.linear.x = pred_control[1]*Dataset.SCALE_ACC
-                self.tele_twist.angular.z = pred_control[0]*Dataset.SCALE_STEER
+                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
+                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                print('x: '+str(self.tele_twist.linear.x))
+                print('z: '+str(self.tele_twist.angular.z))
+        
+        # publish to /train/* topic to record data (if in training mode)
+        if self.training:
+            self.publish_as_trn()
+
         # publish control
         self.control_pub.publish(self.tele_twist)
+    
+    def _publish_as_trn(self):
+        if self.odom:
+            self.pub_left_img.publish(self.left_img)
+            self.pub_right_img.publish(self.right_img)
+            self.pub_depth_img.publish(self.depth_img)
+            self.pub_teleop_vel.publish(self.tele_twist)
+            self.pub_intention.publish(self.intention)
+            self.pub_imu.publish(self.imu)
+            self.pub_odom.publish(self.odom)
+            self.pub_manual_intention.publish(self.manual_intention)
 
     def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=30):
         text = str(text)
@@ -196,7 +280,7 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame=None, model_dir=None, num_intentions=5, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=4, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:

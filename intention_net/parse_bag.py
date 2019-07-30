@@ -25,8 +25,8 @@ from threadedgenerator import ThreadedGenerator
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['rgb_front_left', 'rgb_front_right'],
-    'DEPTHS' : ['depth_front'],
+    'RGBS' : ['/train/left_image', '/train/right_image'],
+    'DEPTHS' : ['/train/depth_image'],
 }
 
 WEB_CAM = {
@@ -40,8 +40,8 @@ SENSOR_TOPIC = {
 }
 
 #INTENTION = '/train/intention'
-INTENTION = '/test_intention'
-CONTROL = '/RosAria/cmd_vel'
+INTENTION = '/train/intention'
+CONTROL = '/train/cmd_vel'
 
 IMG_TOPICS = []
 TOPICS = []
@@ -115,7 +115,7 @@ def main_wrapper(data_dir, sensor='web_cam', intention_type='dlm'):
     for idx, depth_topic in enumerate(DEPTHS):
         fn = osp.join(data_dir, gendir, f'depth_{idx}')
         os.mkdir(fn)
-        TOPICS.append(depth_ropic)
+        TOPICS.append(depth_topic)
         TOPICS_IDX[depth_topic] = len(TOPICS) - 1
         topic_save_path.append(fn)
     if intention_type == 'lpe':

@@ -263,7 +263,7 @@ def main(_):
     model.fit_generator(
             generator=train_generator,
             validation_data=val_generator,
-            use_multiprocessing=True,
+            use_multiprocessing=False,
             workers=flags_obj.num_workers,
             callbacks=callbacks,
             epochs=flags_obj.train_epochs)
