@@ -57,8 +57,6 @@ class Policy(object):
             print(rgb.shape)
 
         if self.mode == 'DLM':
-            intention = Dataset.INTENTION_MAPPING[intention]
-            print('intention used for auto control: %s'%intention)
             i_intention = to_categorical([intention], num_classes=self.num_intentions)
         else:
             i_intention = np.expand_dims(preprocess_input(intention), axis=0)

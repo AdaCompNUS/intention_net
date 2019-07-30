@@ -69,7 +69,7 @@ class Controller(object):
         self.right_image = None 
         self.depth_image = None 
         self.intention = None
-        self.manual_intention = self.INTENTION_MAPPING[0]
+        self.manual_intention = 1
         self.imu = None
         self.odom = None
         self.speed = None
@@ -82,7 +82,7 @@ class Controller(object):
         rospy.Subscriber('/mynteye/right/image_raw', Image, self.cb_right_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye/depth/image_raw', Image, self.cb_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
-            rospy.Subscriber('/test_intention', String, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
@@ -102,7 +102,7 @@ class Controller(object):
         self.pub_intention = rospy.Publisher('/train/intention', Int32, queue_size=1)
         self.pub_imu = rospy.Publisher('/train/imu', Imu, queue_size=1)
         self.pub_odom = rospy.Publisher('/train/odometry/filtered', Odometry, queue_size=1)
-        self.pub_manual_intention  = rospy.Publisher('/train/manual_intention',String,queue_size=1)
+        self.pub_manual_intention  = rospy.Publisher('/train/manual_intention',Int32,queue_size=1)
 
     def cb_left_img(self, msg):
         self.left_img = msg
@@ -116,7 +116,6 @@ class Controller(object):
     
     def cb_dlm_intention(self, msg):
         self.intention = msg.data
-        print(self.intention) 
 
     def cb_lpe_intention(self, msg):
         self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
@@ -152,19 +151,19 @@ class Controller(object):
         # manual control the intention
         #STRAIGHT_FORWARD
         if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
-            self.manual_intention =  list(Dataset.INTENTION_MAPPING.keys())[0]
+            self.manual_intention =  0
             print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[0]))
         #STOP
         if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
-            self.manual_intention = list(Dataset.INTENTION_MAPPING.keys())[1]
+            self.manual_intention = 1
             print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[1]))
         #LEFT_TURN
         if data.buttons[JOY_MAPPING['buttons']['lt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[2]:
-            self.manual_intention = list(Dataset.INTENTION_MAPPING.keys())[2]
+            self.manual_intention = 2
             print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[2]))
         #RIGHT_TURN
         if data.buttons[JOY_MAPPING['buttons']['rt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[3]:
-            self.manual_intention = list(Dataset.INTENTION_MAPPING.keys())[3]
+            self.manual_intention = 3
             print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[3]))
 
     def _on_loop(self, policy):
@@ -190,7 +189,7 @@ class Controller(object):
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
-            self.publish_as_trn()
+            self._publish_as_trn()
 
         # publish control
         self.control_pub.publish(self.tele_twist)

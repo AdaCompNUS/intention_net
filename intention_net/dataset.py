@@ -107,7 +107,8 @@ class PioneerDataset(BaseDataset):
             X.append(img)
 
             if self.mode == 'DLM':
-                lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
+                #lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
+                lbl_intention = lbl[self.data_idx['dlm']]
                 intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
 
             control = [float(lbl[self.data_idx['current_velocity']])/self.SCALE_VEL, (float(lbl[self.data_idx['steering_wheel_angle']]))/self.SCALE_STEER]
