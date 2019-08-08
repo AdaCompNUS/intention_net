@@ -5,6 +5,8 @@ import pygame
 import time
 import sys
 import fire
+import string 
+import random
 
 # import local file
 from joy_teleop import JOY_MAPPING
@@ -62,6 +64,7 @@ class Controller(object):
         self._rate = rospy.Rate(rate)
         self._enable_auto_control = False
         self.current_control = None 
+        self.trajectory_index = None
 
         # callback data store
         self.image = None
@@ -82,7 +85,8 @@ class Controller(object):
         rospy.Subscriber('/mynteye/right/image_raw', Image, self.cb_right_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye/depth/image_raw', Image, self.cb_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
-            rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
+            # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/intention_int', Int32, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
@@ -95,6 +99,7 @@ class Controller(object):
         self.control_pub = rospy.Publisher('/RosAria/cmd_vel', Twist, queue_size=1)
 
         # publishing as training data
+        self.pub_trajectory_index = rospy.Publisher('/train/trajectory_index',String,queue_size=1)
         self.pub_teleop_vel = rospy.Publisher('/train/cmd_vel', Twist, queue_size=1)
         self.pub_left_img = rospy.Publisher('/train/left_img', Image, queue_size=1)
         self.pub_right_img = rospy.Publisher('/train/right_img',Image, queue_size=1)
@@ -145,9 +150,13 @@ class Controller(object):
             print('Manual control')
         if data.buttons[JOY_MAPPING['buttons']['back']] == 1:
             self.key = 'q'
+        # toggle recording mode and generate trajectory index if start recording
         if data.buttons[JOY_MAPPING['buttons']['start']] == 1:
             self.key = 't'
             print('toggle training mode to: %s'%(not self.training))
+            if not self.training:
+                self.trajectory_index = self._random_string(15)
+
         # manual control the intention
         #STRAIGHT_FORWARD
         if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
@@ -165,6 +174,11 @@ class Controller(object):
         if data.buttons[JOY_MAPPING['buttons']['rt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[3]:
             self.manual_intention = 3
             print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[3]))
+    
+    def _random_string(self,n):
+        chars = string.ascii_letters+string.digits
+        ret = ''.join(random.choice(chars) for _ in range(n))
+        return ret
 
     def _on_loop(self, policy):
         """
@@ -196,6 +210,7 @@ class Controller(object):
     
     def _publish_as_trn(self):
         if self.odom:
+            self.pub_trajectory_index.publish(self.trajectory_index)
             self.pub_left_img.publish(self.left_img)
             self.pub_right_img.publish(self.right_img)
             self.pub_depth_img.publish(self.depth_img)

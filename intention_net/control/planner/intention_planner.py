@@ -1,3 +1,7 @@
+import sys
+sys.path.append('/mnt/intention/control/')
+from pioneer_control import INTENTION
+
 import intention_config as config
 import time
 import pose_utils as pu
@@ -5,11 +9,12 @@ from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from nav_msgs.msg import Path, Odometry
 from visualization_msgs.msg import Marker
 from rosgraph_msgs.msg import Clock
-from std_msgs.msg import Float32MultiArray, String, Float32
+from std_msgs.msg import Float32MultiArray, String, Float32, Int32
 import random
 import math
 import rospy
 from functools import reduce
+
 class Localizer(object):
 	def __init__(self):
 		self.current_pose = None
@@ -55,8 +60,9 @@ POSE_TOPIC= config.POSE_TOPIC
 NAV_GOAL_TOPIC = config.NAV_GOAL_TOPIC
 PATH_TOPIC= config.PATH_TOPIC
 MAX_X, MAX_Y = config.MAX_X, config.MAX_Y
-
 LAST=time.time()
+INTENTION = {v:k for k,v in INTENTION.items()}
+
 class IntentionPlanner(object):
 	def __init__(self, use_topic_planner=False, default_intention=[0.0]*config.NUM_INTENTION):
 		self.use_topic_planner = use_topic_planner
@@ -65,6 +71,7 @@ class IntentionPlanner(object):
 		self.planner_topic = None
 		# intention
 		self.intention = None
+		self.intention_int = None
 		self.default_intention = default_intention
 		# previous path
 		self.prev_path = None
@@ -82,6 +89,7 @@ class IntentionPlanner(object):
 		self.pub_change_goal = rospy.Publisher(NAV_GOAL_TOPIC, PoseStamped, queue_size=1)
 		#self.pub_intention = rospy.Publisher('/test_intention', Float32MultiArray, queue_size=1)
 		self.pub_intention = rospy.Publisher('/test_intention', String, queue_size=1)
+		self.pub_intention_int = rospy.Publisher('/train/intention',Int32,queue_size=1)
 		self.pub_turning = rospy.Publisher('/turning_angle', Float32, queue_size=1)
 		print ('initialize done!')
 
@@ -204,8 +212,16 @@ class IntentionPlanner(object):
 
 		#print 'path length', len(self.prev_path)
 		self.intention, turning_angle = self.parse_intention(self.prev_path)
+		if self.intention == config.LEFT:
+			self.intention_int = INTENTION['LEFT_TURN']
+		elif self.intention == config.RIGHT:
+			self.intention_int = INTENTION['RIGHT_TURN']
+		else:
+			self.intention_int = INTENTION['STRAIGHT_FORWARD']
+
 		print ('replan intention', self.intention)
 		self.pub_intention.publish(self.intention)
+		self.pub_intention_int.publish(self.intention_int)
 		self.pub_turning.publish(turning_angle)
 		return self.intention
 
