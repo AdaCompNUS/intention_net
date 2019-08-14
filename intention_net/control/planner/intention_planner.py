@@ -89,7 +89,7 @@ class IntentionPlanner(object):
 		self.pub_change_goal = rospy.Publisher(NAV_GOAL_TOPIC, PoseStamped, queue_size=1)
 		#self.pub_intention = rospy.Publisher('/test_intention', Float32MultiArray, queue_size=1)
 		self.pub_intention = rospy.Publisher('/test_intention', String, queue_size=1)
-		self.pub_intention_int = rospy.Publisher('/train/intention',Int32,queue_size=1)
+		self.pub_intention_int = rospy.Publisher('/train/intention_int',Int32,queue_size=1)
 		self.pub_turning = rospy.Publisher('/turning_angle', Float32, queue_size=1)
 		print ('initialize done!')
 
@@ -158,6 +158,7 @@ class IntentionPlanner(object):
 		if is_goal:
 			#self.change_goal()
 			self.pub_intention.publish(config.STOP)
+			self.pub_intention_int.publish(INTENTION['STRAIGHT_BACKWARD'])
 		else:
 			self.replan()
 		'''
