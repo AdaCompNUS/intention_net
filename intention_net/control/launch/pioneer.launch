@@ -11,10 +11,10 @@
     <include file="/mnt/intention_net/control/launch/joy.launch"/>
 
     <!-- LAUNCH MYNTEYE SENSOR -->
-    <!-- <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/> -->
+    <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
     <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
     <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
-    <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/>
+    <!-- <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/> -->
     <include file="/mnt/intention_net/control/launch/mynteye.launch"/>
     <include file="/mnt/intention_net/control/launch/ladar.launch"/>
 
@@ -25,7 +25,7 @@
     <include file="/mnt/intention_net/control/launch/ekf_template.launch"/>
 
     <!-- ROSBAG RECORD NODE-->
-    <arg name="record"  default="True"/> <!-- Pass record:= True to enable recording-->
+    <arg name="record"  default="False"/> <!-- Pass record:= True to enable recording-->
 
     <group if="$(arg record)"> 
       <node pkg="rosbag"

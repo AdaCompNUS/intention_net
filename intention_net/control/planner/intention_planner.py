@@ -272,6 +272,22 @@ class IntentionPlanner(object):
 			marker.points.append(pu.pose(pos).position)
 		return marker
 
+	def marker_for_last_pose(self,poses):
+		marker = Marker()
+		marker.header.frame_id = "/map"
+		marker.header.stamp - rospy.Time.now()
+		marker.type = Marker.LINE_STRIP
+		marker.scale.x = 2
+		marker.scale.y = 2
+		marker.color.r = 0
+		marker.color.g = 0
+		marker.color.b = 1
+
+		for pos in poses:
+			marker.points.append(pu.pose(pose).position)
+		return marker
+
+
 	def parse_intention(self, path):
 		if path is None:
 			#intention = Float32MultiArray()
@@ -337,13 +353,14 @@ class IntentionPlanner(object):
 	self.pub_goal_pose.publish(self.update_marker(path[self.current_idx+NUM_INTENTION*4/5], path[self.current_idx+NUM_INTENTION-1], True))
 		'''
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
+		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path(self.current_idx)]))
 
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 		#print 'current angle', current_angle
 		temp = [t * 180 / 3.14 for t in intention.data]
 		#print 'intention data', temp
 		#print 'turning angle', turning_angle
-
+		
 		if turning_angle > TURNING_THRESHOLD:
 			intention = config.LEFT
 		elif turning_angle < -TURNING_THRESHOLD:
