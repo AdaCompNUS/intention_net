@@ -322,11 +322,19 @@ class IntentionPlanner(object):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 			delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
 			intention.data.append(delta)
-			print("delta: %s"%(delta*180/3.14))
-			print("current_angle: %s"%current_angle)
+			# print("delta: %s"%(delta*180/3.14))
+			# print("current_angle: %s"%current_angle)
 		
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
 		self.pub_last_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path[self.current_idx]]))
+		
+		print('='*30)
+		print('lst pos:')
+		print(pu.pose(self.localizer.last_pose).position)
+		print('current pos:')
+		print(pu.pose(path[self.current_idx]).position)
+		print('nxt pose:')
+		print(pu.pose(path[self.current_idx+10]).position)
 
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 		temp = [t * 180 / 3.14 for t in intention.data]
