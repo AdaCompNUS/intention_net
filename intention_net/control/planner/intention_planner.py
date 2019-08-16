@@ -276,7 +276,7 @@ class IntentionPlanner(object):
 		marker = Marker()
 		marker.header.frame_id = "/map"
 		marker.header.stamp - rospy.Time.now()
-		marker.type = Marker.LINE_STRIP
+		marker.type = Marker.POINTS
 		marker.scale.x = 2
 		marker.scale.y = 2
 		marker.color.r = 0
