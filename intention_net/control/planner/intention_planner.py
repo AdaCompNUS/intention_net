@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/mnt/intention/control/')
+sys.path.append('/mnt/intention_net/control/')
 from pioneer_control import INTENTION
 
 import intention_config as config
@@ -97,7 +97,7 @@ class IntentionPlanner(object):
 		# subscribe goal
 		rospy.Subscriber(NAV_GOAL_TOPIC, PoseStamped, self.cb_change_goal)
 		rospy.Subscriber(POSE_TOPIC, PoseWithCovarianceStamped, self.cb_current_pose)
-		#rospy.Subscriber('/clock', Clock, self.cb_clock)
+		#rospy.Subscriber('/clock', Clock, selff.cb_clock)
 
 	def change_goal(self):
 		def random_quaternion():
@@ -284,7 +284,7 @@ class IntentionPlanner(object):
 		marker.color.b = 1
 
 		for pos in poses:
-			marker.points.append(pu.pose(pose).position)
+			marker.points.append(pu.pose(pos).position)
 		return marker
 
 
@@ -326,7 +326,10 @@ class IntentionPlanner(object):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 		for i in range(NUM_INTENTION):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-			intention.data.append(pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle))
+			delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
+			intention.data.append(delta)
+			print("delta: %s"%(delta*180/3.14))
+			print("current_angle: %s"%current_angle)
 		'''
 
 		# update ahead idx
@@ -353,7 +356,7 @@ class IntentionPlanner(object):
 	self.pub_goal_pose.publish(self.update_marker(path[self.current_idx+NUM_INTENTION*4/5], path[self.current_idx+NUM_INTENTION-1], True))
 		'''
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
-		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path(self.current_idx)]))
+		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path[self.current_idx]]))
 
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 		#print 'current angle', current_angle
