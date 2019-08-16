@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/mnt/intention/control/')
+sys.path.append('/mnt/intention_net/control/')
 from pioneer_control import INTENTION
 
 import intention_config as config
@@ -97,7 +97,7 @@ class IntentionPlanner(object):
 		# subscribe goal
 		rospy.Subscriber(NAV_GOAL_TOPIC, PoseStamped, self.cb_change_goal)
 		rospy.Subscriber(POSE_TOPIC, PoseWithCovarianceStamped, self.cb_current_pose)
-		#rospy.Subscriber('/clock', Clock, self.cb_clock)
+		#rospy.Subscriber('/clock', Clock, selff.cb_clock)
 
 	def change_goal(self):
 		def random_quaternion():
@@ -325,7 +325,7 @@ class IntentionPlanner(object):
 			print("current_angle: %s"%current_angle)
 		
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
-		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path(self.current_idx)]))
+		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path[self.current_idx]]))
 
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 		temp = [t * 180 / 3.14 for t in intention.data]
