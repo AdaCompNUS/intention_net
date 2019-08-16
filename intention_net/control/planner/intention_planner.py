@@ -284,7 +284,7 @@ class IntentionPlanner(object):
 		marker.color.b = 1
 
 		for pos in poses:
-			marker.points.append(pu.pose(pose).position)
+			marker.points.append(pu.pose(pos).position)
 		return marker
 
 
@@ -310,14 +310,7 @@ class IntentionPlanner(object):
 
 		self.ahead_idx = self.current_idx
 		intention = Float32MultiArray()
-		'''
-		angles = []
-		for i in range(NUM_INTENTION/5):
-			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-			#angles.append(get_angle(self.ahead_idx))
-			angles.append(pu.angle_pose_pair(self.localizer.last_pose, path[self.ahead_idx]))
-		current_angle = reduce(lambda x, y: x + y, angles) / len(angles)
-		'''
+
 		current_angle = 0
 		if self.localizer.last_pose:
 			current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
@@ -326,40 +319,16 @@ class IntentionPlanner(object):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 		for i in range(NUM_INTENTION):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-			intention.data.append(pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle))
-		'''
-
-		# update ahead idx
-		self.ahead_idx = self.current_idx
-		dist = lambda: pu.dist(path[self.current_idx], path[self.ahead_idx])
-		while self.ahead_idx < len(path)-LOCAL_SHIFT and dist() < AHEAD_DIST:
-			self.ahead_idx += 1
-
-		if self.ahead_idx == self.current_idx:
-			return self.default_intention
-
-		p0 = path[self.current_idx]
-		p01 = path[get_valid_next_idx(self.current_idx)]
-		p1 = path[self.ahead_idx]
-		p11 = path[get_valid_next_idx(self.ahead_idx)]
-		a0 = get_angle(self.current_idx)
-		a1 = get_angle(self.ahead_idx)
-		dist = pu.dist(p0, p1)
-		turning_angle = pu.norm_angle(a1-a0)
-
-	# visualize
-		if self.localizer.last_pose:
-			self.pub_cur_pose.publish(self.update_marker(self.localizer.last_pose, path[self.current_idx]))
-	self.pub_goal_pose.publish(self.update_marker(path[self.current_idx+NUM_INTENTION*4/5], path[self.current_idx+NUM_INTENTION-1], True))
-		'''
+			delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
+			intention.data.append(delta)
+			print("delta: %s"%(delta*180/3.14))
+			print("current_angle: %s"%current_angle)
+		
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
 		self.pub_cur_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path(self.current_idx)]))
 
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
-		#print 'current angle', current_angle
 		temp = [t * 180 / 3.14 for t in intention.data]
-		#print 'intention data', temp
-		#print 'turning angle', turning_angle
 		
 		if turning_angle > TURNING_THRESHOLD:
 			intention = config.LEFT
