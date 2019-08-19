@@ -11,12 +11,12 @@
     <include file="/mnt/intention_net/control/launch/joy.launch"/>
 
     <!-- LAUNCH MYNTEYE SENSOR -->
-    <!-- <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/> -->
+    <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
     <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
     <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
     <!-- <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/> -->
     <include file="/mnt/intention_net/control/launch/mynteye.launch"/>
-    <!-- <include file="/mnt/intention_net/control/launch/ladar.launch"/> -->
+    <include file="/mnt/intention_net/control/launch/ladar.launch"/>
 
     <!-- PUBLISH TF BASE_LINK ==> MYNTEYE_LINK
     <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye" args="0 0 0.1397 0 0 0 base_link mynteye_link 100"/>

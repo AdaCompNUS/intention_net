@@ -327,7 +327,6 @@ class IntentionPlanner(object):
 			# print("current_angle: %s"%current_angle)
 		
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
-		self.pub_last_pose.publish(self.marker_for_last_pose([self.localizer.last_pose,path[self.current_idx]]))
 		
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 
