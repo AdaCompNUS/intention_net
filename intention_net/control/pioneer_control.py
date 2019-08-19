@@ -73,10 +73,13 @@ class Controller(object):
         self.depth_image = None 
         self.me1_left = None
         self.me1_right =None
+        self.me1_depth = None 
         self.me2_left = None
         self.me2_right = None
+        self.me2_depth = None 
         self.me3_left = None
-        self.me3_right = None 
+        self.me3_right = None
+        self.me3_depth = None  
         self.intention = None
         self.manual_intention = 1
         self.imu = None
@@ -92,10 +95,13 @@ class Controller(object):
         rospy.Subscriber('/mynteye/depth/image_raw', Image, self.cb_depth_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_1/left/image_raw', Image, self.cb_me1_left_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_1/right/image_raw', Image, self.cb_me1_right_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye_1/depth/image_raw', Image, self.cb_me1_depth_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_2/left/image_raw', Image, self.cb_me2_left_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_2/right/image_raw', Image, self.cb_me2_right_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye_2/depth/image_raw', Image, self.cb_me2_depth_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_3/left/image_raw', Image, self.cb_me3_left_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_3/right/image_raw', Image, self.cb_me3_right_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/mynteye_3/depth/image_raw', Image, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
             # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
             rospy.Subscriber('/intention_int', Int32, self.cb_dlm_intention, queue_size=1)
@@ -118,10 +124,13 @@ class Controller(object):
         self.pub_depth_img = rospy.Publisher('/train/mynteye/depth_img', Image, queue_size=1)
         self.pub_me1_left_img = rospy.Publisher('/train/mynteye_1/left_img', Image, queue_size=1)
         self.pub_me1_right_img = rospy.Publisher('/train/mynteye_1/right_img',Image, queue_size=1)
+        self.pub_me1_depth_img = rospy.Publisher('/train/mynteye_1/depth_img',Image, queue_size=1)
         self.pub_me2_left_img = rospy.Publisher('/train/mynteye_2/left_img', Image, queue_size=1)
         self.pub_me2_right_img = rospy.Publisher('/train/mynteye_2/right_img',Image, queue_size=1)
+        self.pub_me2_depth_img = rospy.Publisher('/train/mynteye_2/depth_img',Image, queue_size=1)
         self.pub_me3_left_img = rospy.Publisher('/train/mynteye_3/left_img', Image, queue_size=1)
         self.pub_me3_right_img = rospy.Publisher('/train/mynteye_3/right_img',Image, queue_size=1)
+        self.pub_me3_depth_img = rospy.Publisher('/train/mynteye_3/depth_img',Image, queue_size=1)
         self.pub_intention = rospy.Publisher('/train/intention', Int32, queue_size=1)
         self.pub_imu = rospy.Publisher('/train/imu', Imu, queue_size=1)
         self.pub_odom = rospy.Publisher('/train/odometry/filtered', Odometry, queue_size=1)
@@ -143,18 +152,26 @@ class Controller(object):
     def cb_me1_right_img(self,msg):
         self.me1_right = msg
     
+    def cb_me1_depth_img(self,msg):
+        self.me1_depth = msg
+    
     def cb_me2_left_img(self,msg):
         self.me2_left = msg
     
     def cb_me2_right_img(self,msg):
         self.me2_right = msg
     
+    def cb_me2_depth_img(self,msg):
+        self.me2_depth = msg
+
     def cb_me3_left_img(self,msg):
         self.me3_left = msg
     
     def cb_me3_right_img(self,msg):
         self.me3_right = msg
 
+    def cb_me3_depth_img(self,msg):
+        self.me3_depth = msg
     
     def cb_dlm_intention(self, msg):
         self.intention = msg.data
@@ -251,12 +268,15 @@ class Controller(object):
             self.pub_left_img.publish(self.left_img)
             self.pub_right_img.publish(self.right_img)
             self.pub_depth_img.publish(self.depth_img)
-            self.pub_me1_left_img(self.me1_left)
-            self.pub_me1_right_img(self.me1_right)
-            self.pub_me2_left_img(self.me2_left)
-            self.pub_me2_right_img(self.me2_right)
-            self.pub_me3_left_img(self.me3_left)
-            self.pub_me3_right_img(self.me3_right)
+            self.pub_me1_left_img.publish(self.me1_left)
+            self.pub_me1_right_img.publish(self.me1_right)
+            self.pub_me1_depth_img.publish(self.me1_depth)
+            self.pub_me2_left_img.publish(self.me2_left)
+            self.pub_me2_right_img.publish(self.me2_right)
+            self.pub_me2_depth_img.publish(self.me2_depth)
+            self.pub_me3_left_img.publish(self.me3_left)
+            self.pub_me3_right_img.publish(self.me3_right)
+            self.pub_me3_depth_img.publish(self.me3_depth)
             self.pub_teleop_vel.publish(self.tele_twist)
             self.pub_intention.publish(self.intention)
             self.pub_imu.publish(self.imu)

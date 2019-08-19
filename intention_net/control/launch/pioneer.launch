@@ -38,10 +38,13 @@
                  /train/mynteye/depth_img 
                  /train/mynteye_1/left_img
                  /train/mynteye_1/right_img
+                 /train/mynteye_1/depth_img
                  /train/mynteye_2/left_img
                  /train/mynteye_2/right_img
+                 /train/mynteye_2/depth_img
                  /train/mynteye_3/left_img
                  /train/mynteye_3/right_img
+                 /train/mynteye_3/depth_img
                  /train/cmd_vel 
                  /train/intention
 		             /train/imu
