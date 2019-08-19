@@ -25,7 +25,7 @@
     <include file="/mnt/intention_net/control/launch/ekf_template.launch"/>
 
     <!-- ROSBAG RECORD NODE-->
-    <arg name="record"  default="False"/> <!-- Pass record:= True to enable recording-->
+    <arg name="record"  default="True"/> <!-- Pass record:= True to enable recording-->
 
     <group if="$(arg record)"> 
       <node pkg="rosbag"
@@ -33,9 +33,15 @@
            name="train_recorder"
            output="screen"
            args="-o /data
-                 /train/left_img 
-                 /train/right_img 
-                 /train/depth_img 
+                 /train/mynteye/left_img 
+                 /train/mynteye/right_img 
+                 /train/mynteye/depth_img 
+                 /train/mynteye_1/left_img
+                 /train/mynteye_1/right_img
+                 /train/mynteye_2/left_img
+                 /train/mynteye_2/right_img
+                 /train/mynteye_3/left_img
+                 /train/mynteye_3/right_img
                  /train/cmd_vel 
                  /train/intention
 		             /train/imu
