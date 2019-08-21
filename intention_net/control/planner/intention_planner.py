@@ -224,7 +224,7 @@ class IntentionPlanner(object):
 		print ('replan intention', self.intention)
 		self.pub_intention.publish(self.intention)
 		self.pub_intention_int.publish(self.intention_int)
-		self.pub_turning.publish(turning_angle)
+		self.pub_turning.publish(turning_angle*180/3.14)
 		return self.intention
 
 	# for visualization
@@ -317,37 +317,17 @@ class IntentionPlanner(object):
 			#current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
 			current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
 		# ignore some beginning position
-		for i in range(int(NUM_INTENTION/5)):
+		for _ in range(int(NUM_INTENTION/5)):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-		for i in range(NUM_INTENTION):
+		for _ in range(NUM_INTENTION):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 			delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
 			intention.data.append(delta)
-			# print("delta: %s"%(delta*180/3.14))
-			# print("current_angle: %s"%current_angle)
 		
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
 		
 		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 
-		'''	
-		print('='*30)
-		print('lst pos:')
-		print(pu.pose(self.localizer.last_pose).position)
-		print('current pos:')
-		print(pu.pose(path[self.current_idx]).position)
-		print('nxt pose:')
-		print(pu.pose(path[self.current_idx+20]).position)
-		print('v1: ')
-		print(pu.angle_pose_pair(self.localizer.last_pose,path[self.current_idx])*180/3.14)
-		print('v2: ')
-		print(pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+10])*180/3.14)
-		print('v3: ')
-		print(pu.angle_pose_pair(path[self.current_idx+10],path[self.current_idx+20])*180/3.14)
-		'''	
-		# temp = [t * 180 / 3.14 for t in intention.data]
-		print('turning angle: %s'%(turning_angle*180/3.14))
-		
 		if turning_angle > TURNING_THRESHOLD:
 			intention = config.LEFT
 		elif turning_angle < -TURNING_THRESHOLD:
