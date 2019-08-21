@@ -119,9 +119,9 @@ class Controller(object):
         # publishing as training data
         self.pub_trajectory_index = rospy.Publisher('/train/trajectory_index',String,queue_size=1)
         self.pub_teleop_vel = rospy.Publisher('/train/cmd_vel', Twist, queue_size=1)
-        self.pub_left_img = rospy.Publisher('/train/mynteye/left_img', CompressedImage, queue_size=1)
-        self.pub_right_img = rospy.Publisher('/train/mynteye/right_img',CompressedImage, queue_size=1)
-        self.pub_depth_img = rospy.Publisher('/train/mynteye/depth_img', CompressedImage, queue_size=1)
+        self.pub_left_img = rospy.Publisher('/train/mynteye/left_img/compressed', CompressedImage, queue_size=1)
+        self.pub_right_img = rospy.Publisher('/train/mynteye/right_img/compressed',CompressedImage, queue_size=1)
+        self.pub_depth_img = rospy.Publisher('/train/mynteye/depth_img/compressed', CompressedImage, queue_size=1)
         self.pub_me1_left_img = rospy.Publisher('/train/mynteye_1/left_img', Image, queue_size=1)
         self.pub_me1_right_img = rospy.Publisher('/train/mynteye_1/right_img',Image, queue_size=1)
         self.pub_me1_depth_img = rospy.Publisher('/train/mynteye_1/depth_img',Image, queue_size=1)

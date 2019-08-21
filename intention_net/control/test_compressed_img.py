@@ -9,7 +9,7 @@ from sensor_msgs.msg import CompressedImage
 class image_feature:
     def __init__(self):
         '''Initialize ros publisher, ros subscriber'''
-        self.subscriber = rospy.Subscriber("/train/left_img",
+        self.subscriber = rospy.Subscriber("/train/mynteye/left_img",
                                     CompressedImage, self.callback,queue_size=1)
 
     def callback(self, ros_data):
