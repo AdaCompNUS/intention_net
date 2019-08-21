@@ -13,7 +13,7 @@ from joy_teleop import JOY_MAPPING
 from policy import Policy
 # ros packages
 import rospy
-from sensor_msgs.msg import Joy, Image, Imu
+from sensor_msgs.msg import Joy, Image, Imu, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32, String
 from nav_msgs.msg import Odometry
@@ -68,9 +68,9 @@ class Controller(object):
 
         # callback data store
         self.image = None
-        self.left_image = None 
-        self.right_image = None 
-        self.depth_image = None 
+        self.left_img = None 
+        self.right_img = None 
+        self.depth_img = None 
         self.me1_left = None
         self.me1_right =None
         self.me1_depth = None 
@@ -93,15 +93,15 @@ class Controller(object):
         rospy.Subscriber('/mynteye/left/image_raw', Image, self.cb_left_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye/right/image_raw', Image, self.cb_right_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye/depth/image_raw', Image, self.cb_depth_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_1/left/image_raw', Image, self.cb_me1_left_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_1/right/image_raw', Image, self.cb_me1_right_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_1/depth/image_raw', Image, self.cb_me1_depth_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_2/left/image_raw', Image, self.cb_me2_left_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_2/right/image_raw', Image, self.cb_me2_right_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_2/depth/image_raw', Image, self.cb_me2_depth_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_3/left/image_raw', Image, self.cb_me3_left_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_3/right/image_raw', Image, self.cb_me3_right_img, queue_size=1, buff_size=2**10)
-        rospy.Subscriber('/mynteye_3/depth/image_raw', Image, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_1/left/image_raw', Image, self.cb_me1_left_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_1/right/image_raw', Image, self.cb_me1_right_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_1/depth/image_raw', Image, self.cb_me1_depth_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_2/left/image_raw', Image, self.cb_me2_left_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_2/right/image_raw', Image, self.cb_me2_right_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_2/depth/image_raw', Image, self.cb_me2_depth_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_3/left/image_raw', Image, self.cb_me3_left_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_3/right/image_raw', Image, self.cb_me3_right_img, queue_size=1, buff_size=2**10)
+        # rospy.Subscriber('/mynteye_3/depth/image_raw', Image, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
             # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
             rospy.Subscriber('/intention_int', Int32, self.cb_dlm_intention, queue_size=1)
@@ -138,7 +138,7 @@ class Controller(object):
 
     def cb_left_img(self, msg):
         self.left_img = msg
-        self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        #self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
     def cb_right_img(self,msg):
         self.right_img = msg
@@ -268,15 +268,15 @@ class Controller(object):
             self.pub_left_img.publish(self.left_img)
             self.pub_right_img.publish(self.right_img)
             self.pub_depth_img.publish(self.depth_img)
-            self.pub_me1_left_img.publish(self.me1_left)
-            self.pub_me1_right_img.publish(self.me1_right)
-            self.pub_me1_depth_img.publish(self.me1_depth)
-            self.pub_me2_left_img.publish(self.me2_left)
-            self.pub_me2_right_img.publish(self.me2_right)
-            self.pub_me2_depth_img.publish(self.me2_depth)
-            self.pub_me3_left_img.publish(self.me3_left)
-            self.pub_me3_right_img.publish(self.me3_right)
-            self.pub_me3_depth_img.publish(self.me3_depth)
+            # self.pub_me1_left_img.publish(self.me1_left)
+            # self.pub_me1_right_img.publish(self.me1_right)
+            # self.pub_me1_depth_img.publish(self.me1_depth)
+            # self.pub_me2_left_img.publish(self.me2_left)
+            # self.pub_me2_right_img.publish(self.me2_right)
+            # self.pub_me2_depth_img.publish(self.me2_depth)
+            # self.pub_me3_left_img.publish(self.me3_left)
+            # self.pub_me3_right_img.publish(self.me3_right)
+            # self.pub_me3_depth_img.publish(self.me3_depth)
             self.pub_teleop_vel.publish(self.tele_twist)
             self.pub_intention.publish(self.intention)
             self.pub_imu.publish(self.imu)
@@ -358,7 +358,7 @@ class Controller(object):
             pygame.quit()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=4, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=4, scale_x=1, scale_z=1, rate=24):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:
