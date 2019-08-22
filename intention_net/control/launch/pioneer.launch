@@ -11,7 +11,7 @@
     <include file="/mnt/intention_net/control/launch/joy.launch"/>
 
     <!-- LAUNCH MYNTEYE SENSOR -->
-    <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
+    <!-- <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/> -->
     <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
     <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
     <!-- <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/> -->
