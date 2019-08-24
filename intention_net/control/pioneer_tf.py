@@ -15,7 +15,7 @@ class Pioneer_Pose(object):
 	# pub_map_pose = rospy.Publisher('/map_pose_2',PoseWithCovarianceStamped,queue_size=1)
 
 	def __init__(self):
-		self.listener = tf.TransformListener(rospy.Time(0))
+		# self.listener = tf.TransformListener(rospy.Time(0))
 
 		# rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.cb_initial, queue_size=1, buff_size=2**10)
 		rospy.Subscriber('/RosAria/pose', Odometry, self.cb_odom, queue_size=1, buff_size=2**10)
@@ -127,13 +127,13 @@ class Pioneer_Pose(object):
 		imu.header.stamp = msg.header.stamp
 		imu.orientation = msg.orientation
 
-		imu.angular_velocity.x = gyro.z
-		imu.angular_velocity.y = -gyro.y
-		imu.angular_velocity.z = gyro.x
+		imu.angular_velocity.x = -gyro.x
+		imu.angular_velocity.y = gyro.z
+		imu.angular_velocity.z = gyro.y
 
-		imu.linear_acceleration.x = acc.z
-		imu.linear_acceleration.y = -acc.y
-		imu.linear_acceleration.z = acc.x
+		imu.linear_acceleration.x = -acc.x
+		imu.linear_acceleration.y = acc.z
+		imu.linear_acceleration.z = acc.y
 
 		self.imu_pub.publish(imu)
 

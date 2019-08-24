@@ -26,7 +26,7 @@
 
   
   <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye" args="0 0 0.1397 0 0 0 base_link mynteye_link_frame 100"/>
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_1" args="0 0 0.1397 0 0 3.14 base_link mynteye_1_link 100"/>
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_2" args="0 0 0.1397 0 0 4.88 base_link mynteye_2_link 100"/>
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_3" args="0 0 0.1397 0 0 1.39 base_link mynteye_3_link 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_1" args="0 0 0.1397 0 0 1 0 base_link mynteye_1_link 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_2" args="0 0 0.1397 0 0 0.6427876 -0.7660444 base_link mynteye_2_link 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_mynteye_3" args="0 0 0.1397 0 0 0.6427876 0.7660444 base_link mynteye_3_link 100"/>
 </launch>

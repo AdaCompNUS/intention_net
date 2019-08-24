@@ -157,18 +157,11 @@ class IntentionPlanner(object):
 		# print("y: %s"%(pu.pose(msg).position.y))
 
 		self.localizer.update_pose(msg)
-		print("="*10)
-		print("MSG")
-		print(msg)
-		print("GOAL")
-		print(self.goal_msg)
-		print("="*10)
 		is_goal = self.is_near_goal(msg, self.goal_msg)
 
 		if is_goal:
 			#self.change_goal()
 			self.pub_intention.publish(config.STOP)
-			self.pub_intention_int.publish(INTENTION['STRAIGHT_BACKWARD'])
 		else:
 			self.replan()
 		'''
@@ -328,8 +321,8 @@ class IntentionPlanner(object):
 		test = list()
 		current_angle = 0
 		if self.localizer.last_pose:
-			# current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
-			current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
+			current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
+			# current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
 		# ignore some beginning position
 		for _ in range(int(NUM_INTENTION/5)):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
