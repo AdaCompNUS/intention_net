@@ -1,7 +1,7 @@
 #INTETION
 FORWARD='forward'
 BACKWARD='backward'
-STOP='stap'
+STOP='stop'
 LEFT='left'
 RIGHT='right'
 

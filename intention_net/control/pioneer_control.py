@@ -81,7 +81,6 @@ class Controller(object):
         self.me3_right = None
         self.me3_depth = None  
         self.intention = None
-        self.manual_intention = 1
         self.imu = None
         self.odom = None
         self.speed = None
@@ -104,7 +103,7 @@ class Controller(object):
         rospy.Subscriber('/mynteye_3/depth/image_raw/compressed', CompressedImage, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
             # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
-            rospy.Subscriber('/test_intention', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/test_intention', String, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
@@ -131,10 +130,9 @@ class Controller(object):
         self.pub_me3_left_img = rospy.Publisher('/train/mynteye_3/left_img/compressed', CompressedImage, queue_size=1)
         self.pub_me3_right_img = rospy.Publisher('/train/mynteye_3/right_img/compressed',CompressedImage, queue_size=1)
         self.pub_me3_depth_img = rospy.Publisher('/train/mynteye_3/depth_img/compressed',CompressedImage, queue_size=1)
-        self.pub_intention = rospy.Publisher('/train/intention', Int32, queue_size=1)
+        self.pub_intention = rospy.Publisher('/train/intention', String, queue_size=1)
         self.pub_imu = rospy.Publisher('/train/imu', Imu, queue_size=1)
         self.pub_odom = rospy.Publisher('/train/odometry/filtered', Odometry, queue_size=1)
-        self.pub_manual_intention  = rospy.Publisher('/train/manual_intention',Int32,queue_size=1)
 
     def cb_left_img(self, msg):
         self.left_img = msg
@@ -210,24 +208,6 @@ class Controller(object):
             if not self.training:
                 self.trajectory_index = self._random_string(15)
 
-        # manual control the intention
-        #STRAIGHT_FORWARD
-        if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
-            self.manual_intention =  0
-            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[0]))
-        #STOP
-        if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
-            self.manual_intention = 1
-            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[1]))
-        #LEFT_TURN
-        if data.buttons[JOY_MAPPING['buttons']['lt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[2]:
-            self.manual_intention = 2
-            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[2]))
-        #RIGHT_TURN
-        if data.buttons[JOY_MAPPING['buttons']['rt']] == 1 and self.manual_intention != self.INTENTION_MAPPING[3]:
-            self.manual_intention = 3
-            print('Intention is manually set to: %s'%(self.INTENTION_MAPPING[3]))
-    
     def _random_string(self,n):
         chars = string.ascii_letters+string.digits
         ret = ''.join(random.choice(chars) for _ in range(n))
@@ -280,7 +260,6 @@ class Controller(object):
             self.pub_intention.publish(self.intention)
             self.pub_imu.publish(self.imu)
             self.pub_odom.publish(self.odom)
-            self.pub_manual_intention.publish(self.manual_intention)
 
     def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=30):
         text = str(text)

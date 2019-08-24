@@ -48,8 +48,7 @@
                  /train/cmd_vel 
                  /train/intention
 		             /train/imu
-		             /train/odometry/filtered
-                 /train/manual_intention" />
+		             /train/odometry/filtered" />
   </group>
 
 </launch>

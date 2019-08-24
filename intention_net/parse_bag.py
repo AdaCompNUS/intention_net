@@ -44,7 +44,7 @@ SENSOR_TOPIC = {
 }
 
 #INTENTION = '/train/intention'
-INTENTION = '/train/intention'
+INTENTION = '/test_intention'
 CONTROL = '/train/cmd_vel'
 
 IMG_TOPICS = []
