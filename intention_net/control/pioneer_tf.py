@@ -121,8 +121,6 @@ class Pioneer_Pose(object):
 		map_to_odom.transform.translation.x, map_to_odom.transform.translation.y, map_to_odom.transform.translation.z  = inv_trans_odom
 		map_to_odom.transform.rotation.x, map_to_odom.transform.rotation.y, map_to_odom.transform.rotation.z, map_to_odom.transform.rotation.w = inv_rot_odom
 
-
-
 		br = tf2_ros.StaticTransformBroadcaster()
 		br.sendTransform(map_to_odom)
 
