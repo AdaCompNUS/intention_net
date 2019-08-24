@@ -54,7 +54,7 @@ TOPICS_IDX = {}
 CHUNK_SIZE = 128
 
 def imgmsg_to_cv2(msg):
-    return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+    return cv2.resize(CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
 def parse_bag(bagfn, intention_type):
     print (f'processing {bagfn} now')

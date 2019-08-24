@@ -138,7 +138,6 @@ class Controller(object):
 
     def cb_left_img(self, msg):
         self.left_img = msg
-        #self.image = CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
     def cb_right_img(self,msg):
         self.right_img = msg
