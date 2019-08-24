@@ -153,7 +153,16 @@ class IntentionPlanner(object):
 
 	def cb_current_pose(self, msg):
 		# print ('current pose', msg)
+		# print("x: %s"%(pu.pose(msg).position.x))
+		# print("y: %s"%(pu.pose(msg).position.y))
+
 		self.localizer.update_pose(msg)
+		print("="*10)
+		print("MSG")
+		print(msg)
+		print("GOAL")
+		print(self.goal_msg)
+		print("="*10)
 		is_goal = self.is_near_goal(msg, self.goal_msg)
 
 		if is_goal:
@@ -259,10 +268,15 @@ class IntentionPlanner(object):
 		if self.use_topic_planner:
 			marker.header.frame_id = "/map"
 		else:
+
 			marker.header.frame_id = "/map"
+
 		marker.header.stamp = rospy.Time.now()
+
 		marker.type = Marker.LINE_STRIP;
+
 		marker.scale.x = 0.7
+
 		marker.scale.y = 1
 		marker.color.a = 1
 		marker.color.r = 1
@@ -338,7 +352,10 @@ class IntentionPlanner(object):
 			intention = config.RIGHT
 		else:
 			intention = config.FORWARD
-
+		print('intention')
+		print(intention)
+		print('turning angle')
+		print(turning_angle)
 		return intention, turning_angle
 
 def main():

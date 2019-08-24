@@ -1,7 +1,7 @@
 #INTETION
 FORWARD='forward'
 BACKWARD='backward'
-STOP='stop'
+STOP='stap'
 LEFT='left'
 RIGHT='right'
 
@@ -19,5 +19,5 @@ WITH_PATH_TOPIC=False
 TOLERANCE=0.0
 #PATH_TOPIC='/move_base/NavfnROS/plan'
 PATH_TOPIC='/global_planner/navfn_planner/plan'
-POSE_TOPIC='/map_pose'
+POSE_TOPIC='/amcl_pose'
 NAV_GOAL_TOPIC = '/move_base_simple/goal'

@@ -8,17 +8,26 @@ from sensor_msgs.msg import Imu
 
 
 class Pioneer_Pose(object):
+	imu_pub = rospy.Publisher('/imu', Imu, queue_size=1)
+	imu_1_pub = rospy.Publisher('/imu1', Imu, queue_size=1)
+	imu_2_pub = rospy.Publisher('/imu2', Imu, queue_size=1)
+	imu_3_pub = rospy.Publisher('/imu3', Imu, queue_size=1)
+	# pub_map_pose = rospy.Publisher('/map_pose_2',PoseWithCovarianceStamped,queue_size=1)
 
 	def __init__(self):
 		self.listener = tf.TransformListener(rospy.Time(0))
 
-		rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.cb_initial, queue_size=1, buff_size=2**10)
+		# rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.cb_initial, queue_size=1, buff_size=2**10)
 		rospy.Subscriber('/RosAria/pose', Odometry, self.cb_odom, queue_size=1, buff_size=2**10)
-		rospy.Subscriber('/odometry/filtered', Odometry, self.cb_global, queue_size=1, buff_size=2**10)
+		# rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, self.cb_global, queue_size=1, buff_size=2**10)
+		# rospy.Subscriber('/map_pose', Odometry, self.cb_map_pose, queue_size=1, buff_size=2**10)
 		rospy.Subscriber('/mynteye/imu/data_raw', Imu, self.cb_imu, queue_size=1, buff_size=2**10)
+		rospy.Subscriber('/mynteye_1/imu/data_raw', Imu, self.cb_imu_1, queue_size=1, buff_size=2**10)
+		rospy.Subscriber('/mynteye_2/imu/data_raw', Imu, self.cb_imu_2, queue_size=1, buff_size=2**10)
+		rospy.Subscriber('/mynteye_3/imu/data_raw', Imu, self.cb_imu_3, queue_size=1, buff_size=2**10)
 
-		self.imu_pub = rospy.Publisher('/imu', Imu, queue_size=1)
-		self.pub_map_pose = rospy.Publisher('/map_pose', PoseWithCovarianceStamped, queue_size=1)
+		
+		# self.pub_map_pose = rospy.Publisher('/map_pose', PoseWithCovarianceStamped, queue_size=1)
 		self.pub_odom = rospy.Publisher('/Pioneer_odom', Odometry, queue_size=1)
 
 	def initialize_map_odom_tf(self,):
@@ -33,28 +42,6 @@ class Pioneer_Pose(object):
 		br = tf2_ros.StaticTransformBroadcaster()
 		br.sendTransform(map_to_odom)
 
-
-	def cb_imu(self, msg):
-		gyro = msg.angular_velocity
-		acc = msg.linear_acceleration
-
-		# Create new Imu Message
-
-		imu = Imu()
-		imu.header.frame_id = "mynteye_link"
-		imu.header.stamp = msg.header.stamp
-		imu.orientation = msg.orientation
-
-		imu.angular_velocity.x = gyro.z
-		imu.angular_velocity.y = -gyro.y
-		imu.angular_velocity.z = gyro.x
-
-		imu.linear_acceleration.x = acc.z
-		imu.linear_acceleration.y = -acc.y
-		imu.linear_acceleration.z = acc.x
-
-		self.imu_pub.publish(imu)
-
 	def cb_odom(self, msg):
 
 		msg.header.frame_id = 'odom'
@@ -64,11 +51,13 @@ class Pioneer_Pose(object):
 
 	def cb_global(self,msg):
 
-		self.listener.waitForTransform("map", "odom", msg.header.stamp,  rospy.Duration(0.01))
-		self.listener.waitForTransform("odom", "base_link", msg.header.stamp,  rospy.Duration(0.01))
-
-		(trans, rot) = self.listener.lookupTransform("map", "base_link", msg.header.stamp)
-
+		self.listener.waitForTransform("map", "odom", msg.header.stamp,  rospy.Duration(0.1))
+		self.listener.waitForTransform("odom", "base_link", msg.header.stamp,  rospy.Duration(0.1))
+		print ('mo',self.listener.lookupTransform("map", "odom" , msg.header.stamp))
+		print ('ob',self.listener.lookupTransform("odom", "base_link" , msg.header.stamp))
+		print ('mb',self.listener.lookupTransform("map", "base_link" , msg.header.stamp))
+		(trans, rot) = self.listener.lookupTransform("map", "base_link" , msg.header.stamp)
+		
 		map_pose = PoseWithCovarianceStamped()
 		map_pose.header.stamp = msg.header.stamp
 		map_pose.header.frame_id = "map"
@@ -127,7 +116,89 @@ class Pioneer_Pose(object):
 		br.sendTransform(map_to_odom)
 
 
+	def cb_imu(self, msg):
+		gyro = msg.angular_velocity
+		acc = msg.linear_acceleration
 
+		# Create new Imu Message
+
+		imu = Imu()
+		imu.header.frame_id = "mynteye_link_frame"
+		imu.header.stamp = msg.header.stamp
+		imu.orientation = msg.orientation
+
+		imu.angular_velocity.x = gyro.z
+		imu.angular_velocity.y = -gyro.y
+		imu.angular_velocity.z = gyro.x
+
+		imu.linear_acceleration.x = acc.z
+		imu.linear_acceleration.y = -acc.y
+		imu.linear_acceleration.z = acc.x
+
+		self.imu_pub.publish(imu)
+
+	def cb_imu_1(self, msg):
+		gyro = msg.angular_velocity
+		acc = msg.linear_acceleration
+
+		# Create new Imu Message
+
+		imu = Imu()
+		imu.header.frame_id = "mynteye_1_link"
+		imu.header.stamp = msg.header.stamp
+		imu.orientation = msg.orientation
+
+		imu.angular_velocity.x = gyro.z
+		imu.angular_velocity.y = -gyro.y
+		imu.angular_velocity.z = gyro.x
+
+		imu.linear_acceleration.x = acc.z
+		imu.linear_acceleration.y = -acc.y
+		imu.linear_acceleration.z = acc.x
+
+		self.imu_1_pub.publish(imu)
+
+	def cb_imu_2(self, msg):
+		gyro = msg.angular_velocity
+		acc = msg.linear_acceleration
+
+		# Create new Imu Message
+
+		imu = Imu()
+		imu.header.frame_id = "mynteye_2_link"
+		imu.header.stamp = msg.header.stamp
+		imu.orientation = msg.orientation
+
+		imu.angular_velocity.x = gyro.z
+		imu.angular_velocity.y = -gyro.y
+		imu.angular_velocity.z = gyro.x
+
+		imu.linear_acceleration.x = acc.z
+		imu.linear_acceleration.y = -acc.y
+		imu.linear_acceleration.z = acc.x
+
+		self.imu_2_pub.publish(imu)
+
+	def cb_imu_3(self, msg):
+		gyro = msg.angular_velocity
+		acc = msg.linear_acceleration
+
+		# Create new Imu Message
+
+		imu = Imu()
+		imu.header.frame_id = "mynteye_3_link"
+		imu.header.stamp = msg.header.stamp
+		imu.orientation = msg.orientation
+
+		imu.angular_velocity.x = gyro.z
+		imu.angular_velocity.y = -gyro.y
+		imu.angular_velocity.z = gyro.x
+
+		imu.linear_acceleration.x = acc.z
+		imu.linear_acceleration.y = -acc.y
+		imu.linear_acceleration.z = acc.x
+
+		self.imu_3_pub.publish(imu)
 
 
 
@@ -138,7 +209,7 @@ if __name__ == '__main__':
 
 	P = Pioneer_Pose()
 
-	P.initialize_map_odom_tf()
+	# P.initialize_map_odom_tf()
 
 	rospy.spin()
 
