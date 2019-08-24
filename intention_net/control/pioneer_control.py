@@ -104,7 +104,7 @@ class Controller(object):
         rospy.Subscriber('/mynteye_3/depth/image_raw/compressed', CompressedImage, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
         if mode == 'DLM':
             # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
-            rospy.Subscriber('/intention_int', Int32, self.cb_dlm_intention, queue_size=1)
+            rospy.Subscriber('/test_intention', Int32, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
