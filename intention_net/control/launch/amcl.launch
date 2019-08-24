@@ -35,6 +35,7 @@
 		<param name="transform_tolerance" value="0.1"/>
 		<param name="recovery_alpha_slow" value="0.0"/>
 		<param name="recovery_alpha_fast" value="0.0"/>
+		<param name="tf_broadcast" value="true"/>
         <!--
         <param name="odom_frame_id"             value="$(arg odom_frame_id)"/>
         <param name="base_frame_id"             value="$(arg base_frame_id)"/>

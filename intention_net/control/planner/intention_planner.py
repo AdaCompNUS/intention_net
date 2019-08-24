@@ -153,13 +153,15 @@ class IntentionPlanner(object):
 
 	def cb_current_pose(self, msg):
 		# print ('current pose', msg)
+		# print("x: %s"%(pu.pose(msg).position.x))
+		# print("y: %s"%(pu.pose(msg).position.y))
+
 		self.localizer.update_pose(msg)
 		is_goal = self.is_near_goal(msg, self.goal_msg)
 
 		if is_goal:
 			#self.change_goal()
 			self.pub_intention.publish(config.STOP)
-			self.pub_intention_int.publish(INTENTION['STRAIGHT_BACKWARD'])
 		else:
 			self.replan()
 		'''
@@ -259,10 +261,15 @@ class IntentionPlanner(object):
 		if self.use_topic_planner:
 			marker.header.frame_id = "/map"
 		else:
+
 			marker.header.frame_id = "/map"
+
 		marker.header.stamp = rospy.Time.now()
+
 		marker.type = Marker.LINE_STRIP;
+
 		marker.scale.x = 0.7
+
 		marker.scale.y = 1
 		marker.color.a = 1
 		marker.color.r = 1
@@ -314,8 +321,8 @@ class IntentionPlanner(object):
 		test = list()
 		current_angle = 0
 		if self.localizer.last_pose:
-			# current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
-			current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
+			current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
+			# current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
 		# ignore some beginning position
 		for _ in range(int(NUM_INTENTION/5)):
 			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
@@ -338,7 +345,10 @@ class IntentionPlanner(object):
 			intention = config.RIGHT
 		else:
 			intention = config.FORWARD
-
+		print('intention')
+		print(intention)
+		print('turning angle')
+		print(turning_angle)
 		return intention, turning_angle
 
 def main():
