@@ -101,6 +101,9 @@ class PioneerDataset(BaseDataset):
         X = []
         I = []
         Y = []
+        XL = []
+        XM = []
+        XR = []
         for idx in indexes:
             lbl = self.data[idx]
             
@@ -112,7 +115,9 @@ class PioneerDataset(BaseDataset):
                     front_img = preprocess_input(front_img)
                     left_img = preprocess_input(left_img)
                     right_img = preprocess_input(right_img)
-                X.append([left_img,front_img,right_img])
+                XL.append(left_img)
+                XM.append(front_img)
+                XR.append(right_img)
             else: # only use front camera
                 img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
                 if self.preprocess:
@@ -120,18 +125,25 @@ class PioneerDataset(BaseDataset):
                 X.append(img)
 
             if self.mode == 'DLM':
-                lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
-                #lbl_intention = lbl[self.data_idx['dlm']]
+                #lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
+                lbl_intention = lbl[self.data_idx['dlm']]
                 intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
 
             control = [float(lbl[self.data_idx['current_velocity']])/self.SCALE_VEL, (float(lbl[self.data_idx['steering_wheel_angle']]))/self.SCALE_STEER]
             I.append(intention)
             Y.append(control)
-
-        X = np.array(X)
-        I = np.array(I)
-        Y = np.array(Y)
-        return [X, I], Y
+        if self.input_frame != 'MULTI':
+            X = np.array(X)
+            I = np.array(I)
+            Y = np.array(Y)
+            return [X, I], Y
+        else:
+            XL = np.array(XL)
+            XM = np.array(XM)
+            XR = np.array(XR)
+            I = np.array(I)
+            Y = np.array(Y)
+            return [XL,XM,XR,I],Y
 
     def read_csv(self, fn, has_header=True):
         f = open(fn)
