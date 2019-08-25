@@ -37,7 +37,7 @@ def FeatModel():
     oup = layer_dict['avg_pool'].output
     return Model(inputs=inp, outputs=oup)
 
-def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_model=False):
+def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_model=True):
     print (f'Intention Mode {mode} Input frame {input_frame}')
     # model
     feat_model = FeatModel()
