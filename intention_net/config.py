@@ -15,7 +15,7 @@ help_wrap = functools.partial(flags.text_wrap, length=80, indent="",
 absl_app.HelpshortFlag.SHORT_NAME = "h"
 # base flags
 flags.DEFINE_string(
-    name="data_dir", short_name="dd", default="/data",
+    name="data_dir", short_name="dd", default="/home/duong/Downloads/new_data",
     help=help_wrap("The location of the input data."))
 
 flags.DEFINE_string(
