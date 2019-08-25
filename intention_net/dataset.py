@@ -57,14 +57,10 @@ class BaseDataset(keras.utils.Sequence):
 
 class PioneerDataset(BaseDataset):
     INTENTION_MAPPING = {
-        # 'left' : 0,
-        # 'right': 1,
-        # 'forward':2,
-        # 'stop':3
-        'forward':0,
-        'stop':1,
-        'left':2,
-        'right':3,
+        'left' : 0,
+        'right': 1,
+        'forward':2,
+        'stop':3
     }
     # only add dlm support here, you can extend to lpe easily refering to the HuaweiFinalDataset example
     NUM_CONTROL = 2
@@ -88,8 +84,14 @@ class PioneerDataset(BaseDataset):
 
         self.images = []
         for datum in self.data:
-            fn = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
-            self.images.append(fn)
+            if self.input_frame == 'MULTI': # front + left + right cam
+                fn_left = osp.join(base_dir, 'rgb_6', f"{int(datum[self.data_idx['frame']])}.jpg")
+                fn_right = osp.join(base_dir, 'rgb_4', f"{int(datum[self.data_idx['frame']])}.jpg")
+                fn_front = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
+                self.images.append([fn_left,fn_front,fn_right])
+            else: # front cam 
+                fn = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
+                self.images.append(fn)
 
     def __getitem__(self, index):
         """
@@ -101,10 +103,21 @@ class PioneerDataset(BaseDataset):
         Y = []
         for idx in indexes:
             lbl = self.data[idx]
-            img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
-            if self.preprocess:
-                img = preprocess_input(img)
-            X.append(img)
+            
+            if self.input_frame == 'MULTI': # front + left + right cam
+                left_img = img_to_array(load_img(self.images[idx][0], target_size=self.target_size))
+                front_img = img_to_array(load_img(self.images[idx][1], target_size=self.target_size))
+                right_img = img_to_array(load_img(self.images[idx][2], target_size=self.target_size))
+                if self.preprocess:
+                    front_img = preprocess_input(front_img)
+                    left_img = preprocess_input(left_img)
+                    right_img = preprocess_input(right_img)
+                X.append([left_img,front_img,right_img])
+            else: # only use front camera
+                img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
+                if self.preprocess:
+                    img = preprocess_input(img)
+                X.append(img)
 
             if self.mode == 'DLM':
                 lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]

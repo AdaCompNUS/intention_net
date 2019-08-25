@@ -37,21 +37,30 @@ def FeatModel():
     oup = layer_dict['avg_pool'].output
     return Model(inputs=inp, outputs=oup)
 
-def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
+def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_model=False):
     print (f'Intention Mode {mode} Input frame {input_frame}')
     # model
     feat_model = FeatModel()
+    
+    # Input for intention net
     if input_frame != 'MULTI':
-        # Input for intention net
         rgb_input = Input(shape=(224, 224, 3))
         rgb_feat = [feat_model(rgb_input)]
     else:
         rgbl_input = Input(shape=(224, 224, 3))
         rgbm_input = Input(shape=(224, 224, 3))
         rgbr_input = Input(shape=(224, 224, 3))
-        rgbl_feat = feat_model(rgbl_input)
-        rgbm_feat = feat_model(rgbm_input)
-        rgbr_feat = feat_model(rgbr_input)
+        
+        if use_side_model: #use different model for side view
+            side_feat_model = FeatModel()
+            rgbl_feat = side_feat_model(rgbl_input)
+            rgbm_feat = feat_model(rgbm_input)
+            rgbr_feat = side_feat_model(rgbr_input)
+        else:
+            rgbl_feat = feat_model(rgbl_input)
+            rgbm_feat = feat_model(rgbm_input)
+            rgbr_feat = feat_model(rgbr_input)
+            
         rgb_feat = [rgbl_feat, rgbm_feat, rgbr_feat]
 
     if mode == 'DLM':
@@ -77,7 +86,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1):
             #model = Model(inputs=[rgb_input, intention_input, speed_input], outputs=control)
             model = Model(inputs=[rgb_input, intention_input], outputs=control)
         else:
-            model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, intention_input, speed_input], outputs=control)
+            model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, intention_input], outputs=control)
 
     else:
         if mode == 'LPE_SIAMESE':
