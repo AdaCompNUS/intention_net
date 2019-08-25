@@ -25,11 +25,11 @@ from threadedgenerator import ThreadedGenerator
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['/train/mynteye/left_img', '/train/mynteye/right_img',\
-        '/train/mynteye_1/left_img', '/train/mynteye_1/right_img',\
-        '/train/mynteye_2/left_img', '/train/mynteye_2/right_img',\
-        '/train/mynteye_3/left_img', '/train/mynteye_3/right_img'],
-    'DEPTHS' : ['/train/mynteye/depth_img','/train/mynteye_1/depth_img','/train/mynteye_2/depth_img','/train/mynteye_3/depth_img'],
+    'RGBS' : ['/train/mynteye/left_img/compressed', '/train/mynteye/right_img/compressed',\
+        '/train/mynteye_1/left_img/compressed', '/train/mynteye_1/right_img/compressed',\
+        '/train/mynteye_2/left_img/compressed', '/train/mynteye_2/right_img/compressed',\
+        '/train/mynteye_3/left_img/compressed', '/train/mynteye_3/right_img/compressed'],
+    'DEPTHS' : ['/train/mynteye/depth_img/compressed','/train/mynteye_1/depth_img/compressed','/train/mynteye_2/depth_img/compressed','/train/mynteye_3/depth_img/compressed'],
 }
 
 WEB_CAM = {
