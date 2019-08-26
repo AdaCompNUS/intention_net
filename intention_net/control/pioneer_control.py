@@ -13,7 +13,7 @@ from joy_teleop import JOY_MAPPING
 from policy import Policy
 # ros packages
 import rospy
-from sensor_msgs.msg import Joy, Image, Imu, CompressedImage
+from sensor_msgs.msg import Joy, Image, Imu, CompressedImage, LaserScan
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32, String
 from nav_msgs.msg import Odometry
@@ -82,11 +82,15 @@ class Controller(object):
         self.me3_depth = None  
         self.intention = None
         self.imu = None
+        self.imu1 = None
+        self.imu2 = None
+        self.imu3 = None
         self.odom = None
         self.speed = None
         self.labeled_control = None
         self.key = None
         self.training = False
+        self.scan = None
 
         # subscribe ros messages
         rospy.Subscriber('/mynteye/left/image_raw/compressed', CompressedImage, self.cb_left_img, queue_size=1, buff_size=2**10)
@@ -101,6 +105,12 @@ class Controller(object):
         rospy.Subscriber('/mynteye_3/left/image_raw/compressed', CompressedImage, self.cb_me3_left_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_3/right/image_raw/compressed', CompressedImage, self.cb_me3_right_img, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/mynteye_3/depth/image_raw/compressed', CompressedImage, self.cb_me3_depth_img, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/scan', LaserScan, self.cb_scan, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/imu', Imu, self.cb_imu, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/imu1', Imu, self.cb_imu1, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/imu2', Imu, self.cb_imu2, queue_size=1, buff_size=2**10)
+        rospy.Subscriber('/imu3', Imu, self.cb_imu3, queue_size=1, buff_size=2**10)
+
         if mode == 'DLM':
             # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
             rospy.Subscriber('/test_intention', String, self.cb_dlm_intention, queue_size=1)
@@ -108,8 +118,6 @@ class Controller(object):
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
         rospy.Subscriber('/speed', Float32, self.cb_speed, queue_size=1) 
         rospy.Subscriber('/odometry/filtered',Odometry,self.cb_odom,queue_size=1,buff_size=2**10)
-        rospy.Subscriber('/mynteye/imu/data_raw',Imu,self.cb_imu,queue_size=1,buff_size=2**10)
-        rospy.Subscriber('/labeled_control', Twist, self.cb_labeled_control, queue_size=1)
         rospy.Subscriber('/joy', Joy, self.cb_joy)
         
         # publish control
@@ -132,7 +140,15 @@ class Controller(object):
         self.pub_me3_depth_img = rospy.Publisher('/train/mynteye_3/depth_img/compressed',CompressedImage, queue_size=1)
         self.pub_intention = rospy.Publisher('/train/intention', String, queue_size=1)
         self.pub_imu = rospy.Publisher('/train/imu', Imu, queue_size=1)
+        self.pub_imu1 = rospy.Publisher('/train/imu1', Imu, queue_size=1)
+        self.pub_imu2 = rospy.Publisher('/train/imu2', Imu, queue_size=1)
+        self.pub_imu3 = rospy.Publisher('/train/imu3', Imu, queue_size=1)
         self.pub_odom = rospy.Publisher('/train/odometry/filtered', Odometry, queue_size=1)
+        self.pub_scan = rospy.Publisher('/train/scan',LaserScan,queue_size=1)
+        
+
+    def cb_scan(self,msg):
+        self.scan = msg
 
     def cb_left_img(self, msg):
         self.left_img = msg
@@ -184,6 +200,15 @@ class Controller(object):
 
     def cb_imu(self,msg):
         self.imu = msg
+    
+    def cb_imu1(self,msg):
+        self.imu1 = msg
+    
+    def cb_imu2(self,msg):
+        self.imu2 = msg
+    
+    def cb_imu3(self,msg):
+        self.imu3 = msg
 
     def cb_odom(self,msg):
         self.odom = msg
@@ -259,7 +284,11 @@ class Controller(object):
             self.pub_teleop_vel.publish(self.tele_twist)
             self.pub_intention.publish(self.intention)
             self.pub_imu.publish(self.imu)
+            self.pub_imu1.publish(self.imu1)
+            self.pub_imu2.publish(self.imu2)
+            self.pub_imu3.publish(self.imu3)
             self.pub_odom.publish(self.odom)
+            self.pub_scan.publish(self.scan)
 
     def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=30):
         text = str(text)

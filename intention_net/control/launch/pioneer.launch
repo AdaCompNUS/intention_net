@@ -47,7 +47,11 @@
                  /train/mynteye_3/depth_img/compressed
                  /train/cmd_vel 
                  /train/intention
+		             /train/scan
 		             /train/imu
+		             /train/imu1
+		             /train/imu2
+		             /train/imu3
 		             /train/odometry/filtered" />
   </group>
 
