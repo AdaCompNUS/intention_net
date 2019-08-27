@@ -140,7 +140,7 @@ def define_intention_net_flags():
             help=help_wrap("Intention Net mode to run"))
 
     flags.DEFINE_enum(
-            name='input_frame', short_name='input_frame', default="NORMAL",
+            name='input_frame', short_name='input_frame', default="MULTI",
             enum_values=['NORMAL', 'WIDE', 'MULTI'],
             help=help_wrap("Intention Net mode to run"))
 

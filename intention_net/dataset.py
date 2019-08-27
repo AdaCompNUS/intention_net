@@ -57,14 +57,10 @@ class BaseDataset(keras.utils.Sequence):
 
 class PioneerDataset(BaseDataset):
     INTENTION_MAPPING = {
-        # 'left' : 0,
-        # 'right': 1,
-        # 'forward':2,
-        # 'stop':3
-        'forward':0,
-        'stop':1,
-        'left':2,
-        'right':3,
+        'left' : 0,
+        'right': 1,
+        'forward':2,
+        'stop':3
     }
     # only add dlm support here, you can extend to lpe easily refering to the HuaweiFinalDataset example
     NUM_CONTROL = 2
@@ -88,8 +84,14 @@ class PioneerDataset(BaseDataset):
 
         self.images = []
         for datum in self.data:
-            fn = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
-            self.images.append(fn)
+            if self.input_frame == 'MULTI': # front + left + right cam
+                fn_left = osp.join(base_dir, 'rgb_6', f"{int(datum[self.data_idx['frame']])}.jpg")
+                fn_right = osp.join(base_dir, 'rgb_4', f"{int(datum[self.data_idx['frame']])}.jpg")
+                fn_front = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
+                self.images.append([fn_left,fn_front,fn_right])
+            else: # front cam 
+                fn = osp.join(base_dir, 'rgb_0', f"{int(datum[self.data_idx['frame']])}.jpg")
+                self.images.append(fn)
 
     def __getitem__(self, index):
         """
@@ -99,12 +101,28 @@ class PioneerDataset(BaseDataset):
         X = []
         I = []
         Y = []
+        XL = []
+        XM = []
+        XR = []
         for idx in indexes:
             lbl = self.data[idx]
-            img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
-            if self.preprocess:
-                img = preprocess_input(img)
-            X.append(img)
+            
+            if self.input_frame == 'MULTI': # front + left + right cam
+                left_img = img_to_array(load_img(self.images[idx][0], target_size=self.target_size))
+                front_img = img_to_array(load_img(self.images[idx][1], target_size=self.target_size))
+                right_img = img_to_array(load_img(self.images[idx][2], target_size=self.target_size))
+                if self.preprocess:
+                    front_img = preprocess_input(front_img)
+                    left_img = preprocess_input(left_img)
+                    right_img = preprocess_input(right_img)
+                XL.append(left_img)
+                XM.append(front_img)
+                XR.append(right_img)
+            else: # only use front camera
+                img = img_to_array(load_img(self.images[idx], target_size=self.target_size))
+                if self.preprocess:
+                    img = preprocess_input(img)
+                X.append(img)
 
             if self.mode == 'DLM':
                 print(self.images[idx])
@@ -115,11 +133,18 @@ class PioneerDataset(BaseDataset):
             control = [float(lbl[self.data_idx['current_velocity']])/self.SCALE_VEL, (float(lbl[self.data_idx['steering_wheel_angle']]))/self.SCALE_STEER]
             I.append(intention)
             Y.append(control)
-
-        X = np.array(X)
-        I = np.array(I)
-        Y = np.array(Y)
-        return [X, I], Y
+        if self.input_frame != 'MULTI':
+            X = np.array(X)
+            I = np.array(I)
+            Y = np.array(Y)
+            return [X, I], Y
+        else:
+            XL = np.array(XL)
+            XM = np.array(XM)
+            XR = np.array(XR)
+            I = np.array(I)
+            Y = np.array(Y)
+            return [XL,XM,XR,I],Y
 
     def read_csv(self, fn, has_header=True):
         f = open(fn)

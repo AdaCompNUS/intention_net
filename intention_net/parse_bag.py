@@ -25,8 +25,11 @@ from threadedgenerator import ThreadedGenerator
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['/train/left_image', '/train/right_image'],
-    'DEPTHS' : ['/train/depth_image'],
+    'RGBS' : ['/train/mynteye/left_img/compressed', '/train/mynteye/right_img/compressed',\
+        '/train/mynteye_1/left_img/compressed', '/train/mynteye_1/right_img/compressed',\
+        '/train/mynteye_2/left_img/compressed', '/train/mynteye_2/right_img/compressed',\
+        '/train/mynteye_3/left_img/compressed', '/train/mynteye_3/right_img/compressed'],
+    'DEPTHS' : ['/train/mynteye/depth_img/compressed','/train/mynteye_1/depth_img/compressed','/train/mynteye_2/depth_img/compressed','/train/mynteye_3/depth_img/compressed'],
 }
 
 WEB_CAM = {
@@ -40,7 +43,7 @@ SENSOR_TOPIC = {
 }
 
 #INTENTION = '/train/intention'
-INTENTION = '/train/intention'
+INTENTION = '/test_intention'
 CONTROL = '/train/cmd_vel'
 
 IMG_TOPICS = []
@@ -51,7 +54,7 @@ TOPICS_IDX = {}
 CHUNK_SIZE = 128
 
 def imgmsg_to_cv2(msg):
-    return cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+    return cv2.resize(CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
 
 def parse_bag(bagfn, intention_type):
     print (f'processing {bagfn} now')
