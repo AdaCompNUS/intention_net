@@ -13,7 +13,7 @@ import numpy as np
 from tqdm import tqdm
 from munch import Munch
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image, Imu
+from sensor_msgs.msg import Image, Imu, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 from toolz import partition_all
