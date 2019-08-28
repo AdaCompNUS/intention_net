@@ -51,7 +51,7 @@ TOPICS = []
 TOPICS_IDX = {}
 
 # CHUNK_SIZE for parallel parsing
-CHUNK_SIZE = 128
+CHUNK_SIZE = 1
 
 def imgmsg_to_cv2(msg):
     return cv2.resize(CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
