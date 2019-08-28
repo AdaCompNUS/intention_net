@@ -52,8 +52,9 @@ class Policy(object):
         if self.input_frame == 'MULTI':
             rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
         else:
-            #rgb = [np.expand_dims(preprocess_input(image), axis=0)]
-            rgb = np.expand_dims(preprocess_input(image), axis=0)
+            rgb = [np.expand_dims(preprocess_input(image), axis=0)]
+            # rgb = np.expand_dims(preprocess_input(image), axis=0)
+            print("rgb's shape")
             print(rgb.shape)
 
         if self.mode == 'DLM':
@@ -61,10 +62,15 @@ class Policy(object):
         else:
             i_intention = np.expand_dims(preprocess_input(intention), axis=0)
 
-        i_speed = np.array([[speed]])
-        #pred_control = self.model.predict(rgb + [i_intention, i_speed])
-        pred_control = self.model.predict([rgb,i_intention])
-        
+        if self.input_frame == 'NORMAL':
+            #TODO: Verify this 
+            #i_speed = np.array([[speed]])
+            pred_control = self.model.predict(rgb + [i_intention])
+            # pred_control = self.model.predict([rgb,i_intention])
+        elif self.input_frame == 'MULTI':
+            #TODO: Implement the predict for multi camera
+            pred_control = self.model.predict(rgb+[i_intention])
+
         if self.vis:
             self.fig.clf()
             self.count += 1
