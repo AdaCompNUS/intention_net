@@ -53,9 +53,6 @@ class Policy(object):
             rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
         else:
             rgb = [np.expand_dims(preprocess_input(image), axis=0)]
-            # rgb = np.expand_dims(preprocess_input(image), axis=0)
-            print("rgb's shape")
-            print(rgb.shape)
 
         if self.mode == 'DLM':
             i_intention = to_categorical([intention], num_classes=self.num_intentions)
