@@ -15,9 +15,11 @@ import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 
 # intention net package
-from intention_net.net import IntentionNet
-from intention_net.dataset import preprocess_input
-from intention_net.dataset import PioneerDataset as Dataset
+import sys
+sys.path.append('/mnt/intention_net')
+from net import IntentionNet
+from dataset import preprocess_input
+from dataset import PioneerDataset as Dataset
 import matplotlib.pyplot as plt
 
 class Policy(object):
