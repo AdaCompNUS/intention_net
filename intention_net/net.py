@@ -13,7 +13,7 @@ from keras import backend as K
 
 INIT='he_normal'
 L2=1e-5
-DROPOUT=0.3
+DROPOUT=0.5
 
 def filter_control(args):
     outs, intention = args[:-1], args[-1]
@@ -60,7 +60,16 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
             rgbl_feat = feat_model(rgbl_input)
             rgbm_feat = feat_model(rgbm_input)
             rgbr_feat = feat_model(rgbr_input)
-            
+
+        rgbl_feat = Dropout(DROPOUT)(rgbl_feat)
+        rgbl_feat = Dense(512,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbl_feat)
+ 
+        rgbm_feat = Dropout(DROPOUT)(rgbm_feat)
+        rgbm_feat = Dense(1024,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbm_feat)
+        
+        rgbr_feat = Dropout(DROPOUT)(rgbr_feat)
+        rgbr_feat = Dense(512,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbr_feat)
+
         rgb_feat = [rgbl_feat, rgbm_feat, rgbr_feat]
 
     if mode == 'DLM':
@@ -80,6 +89,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
             out = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
             outs.append(out)
         outs.append(intention_input)
+        print ('num_intentions', num_intentions)
         control = Lambda(filter_control, output_shape=(num_control, ))(outs)
 
         if input_frame != 'MULTI':
