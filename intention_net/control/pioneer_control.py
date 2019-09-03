@@ -26,13 +26,6 @@ from intention_net.dataset import PioneerDataset as Dataset
 SCREEN_SCALE = 1
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
-INTENTION = {
-    0: 'STRAIGHT_FORWARD',
-    1: 'STRAIGHT_BACK',
-    2: 'LEFT_TURN',
-    3: 'RIGHT_TURN',
-    4: 'LANE_FOLLOW',
-}
 
 class Timer(object):
     def __init__(self):
@@ -56,8 +49,6 @@ class Timer(object):
 class Controller(object):
     tele_twist = Twist()
     def __init__(self, mode, scale_x, scale_z, rate):
-        global INTENTION
-        self.INTENTION_MAPPING = INTENTION
         self._mode = mode
         self._scale_x = scale_x
         self._scale_z = scale_z
@@ -253,7 +244,6 @@ class Controller(object):
         if self._enable_auto_control:
             if self._mode == 'DLM':
                 intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
-            print('inside auto loop')
             if policy.input_frame == 'NORMAL': # 1 cam
                 # convert ros msg -> cv2
                 img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
@@ -354,7 +344,7 @@ class Controller(object):
             self.text_to_screen('Speed: {:.4f} m/s'.format(self.speed), pos=(150, WINDOW_HEIGHT-30))
         if self.intention is not None:
             if self._mode == 'DLM':
-                self.text_to_screen(INTENTION[self.intention])
+                self.text_to_screen(Dataset.INTENTION_MAPPING_NAME[self.intention])
             else:
                 surface = pygame.surfarray.make_surface(self.intention.swapaxes(0, 1))
                 self._display.blit(surface, (SCREEN_SCALE*(WINDOW_WIDTH-self.intention.shape[0])/2, 0))

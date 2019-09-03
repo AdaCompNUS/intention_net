@@ -140,7 +140,7 @@ def define_intention_net_flags():
             help=help_wrap("Intention Net mode to run"))
 
     flags.DEFINE_enum(
-            name='input_frame', short_name='input_frame', default="MULTI",
+            name='input_frame', short_name='input_frame', default="NORMAL",
             enum_values=['NORMAL', 'WIDE', 'MULTI'],
             help=help_wrap("Intention Net mode to run"))
 
@@ -163,9 +163,9 @@ def lr_schedule(epoch):
         lr *= 1e-2
     elif epoch > 80:
         lr *= 5e-2
-    elif epoch > 60:
+    elif epoch > 40:
         lr *= 1e-1
-    elif epoch > 30:
+    elif epoch > 20:
         lr *= 5e-1
     print ('Learning rate: ', lr)
     return lr
@@ -218,7 +218,7 @@ def main(_):
         from dataset import HuaWeiFinalDataset as Dataset
         print ('=> using HUAWEI data')
 
-    print ('mode: ', flags_obj.mode, 'input frame: ', flags_obj.input_frame, 'bath_size', flags_obj.batch_size)
+    print ('mode: ', flags_obj.mode, 'input frame: ', flags_obj.input_frame, 'bath_size', flags_obj.batch_size, cfg.NUM_INTENTIONS)
     model = IntentionNet(flags_obj.mode, flags_obj.input_frame, Dataset.NUM_CONTROL, cfg.NUM_INTENTIONS)
 
     if flags_obj.num_gpus > 1:
@@ -253,7 +253,7 @@ def main(_):
     callbacks = [saveBestModel, lr_reducer, lr_scheduler, tensorboard]
 
     # we choose max_samples to save time for training. For large dataset, we sample 200000 samples each epoch.
-    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=True, max_samples=200000, input_frame=flags_obj.input_frame)
+    train_generator = Dataset(flags_obj.data_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, shuffle=False, max_samples=200000, input_frame=flags_obj.input_frame)
     val_generator = Dataset(flags_obj.val_dir, flags_obj.batch_size, cfg.NUM_INTENTIONS, mode=flags_obj.mode, max_samples=1000, input_frame=flags_obj.input_frame)
 
     optimizer = get_optimizer()
