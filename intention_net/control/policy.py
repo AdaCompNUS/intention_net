@@ -15,9 +15,11 @@ import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 
 # intention net package
-from intention_net.net import IntentionNet
-from intention_net.dataset import preprocess_input
-from intention_net.dataset import PioneerDataset as Dataset
+import sys
+sys.path.append('/mnt/intention_net')
+from net import IntentionNet
+from dataset import preprocess_input
+from dataset import PioneerDataset as Dataset
 import matplotlib.pyplot as plt
 
 class Policy(object):
@@ -52,19 +54,22 @@ class Policy(object):
         if self.input_frame == 'MULTI':
             rgb = [np.expand_dims(preprocess_input(im), axis=0) for im in image]
         else:
-            #rgb = [np.expand_dims(preprocess_input(image), axis=0)]
-            rgb = np.expand_dims(preprocess_input(image), axis=0)
-            print(rgb.shape)
+            rgb = [np.expand_dims(preprocess_input(image), axis=0)]
 
         if self.mode == 'DLM':
             i_intention = to_categorical([intention], num_classes=self.num_intentions)
         else:
             i_intention = np.expand_dims(preprocess_input(intention), axis=0)
 
-        i_speed = np.array([[speed]])
-        #pred_control = self.model.predict(rgb + [i_intention, i_speed])
-        pred_control = self.model.predict([rgb,i_intention])
-        
+        if self.input_frame == 'NORMAL':
+            #TODO: Verify this 
+            #i_speed = np.array([[speed]])
+            pred_control = self.model.predict(rgb + [i_intention])
+            # pred_control = self.model.predict([rgb,i_intention])
+        elif self.input_frame == 'MULTI':
+            #TODO: Implement the predict for multi camera
+            pred_control = self.model.predict(rgb+[i_intention])
+
         if self.vis:
             self.fig.clf()
             self.count += 1

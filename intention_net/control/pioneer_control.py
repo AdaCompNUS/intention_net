@@ -7,6 +7,7 @@ import sys
 import fire
 import string 
 import random
+import numpy as np 
 
 # import local file
 from joy_teleop import JOY_MAPPING
@@ -65,6 +66,7 @@ class Controller(object):
         self._enable_auto_control = False
         self.current_control = None 
         self.trajectory_index = None
+        self.bridge = CvBridge()
 
         # callback data store
         self.image = None
@@ -249,15 +251,33 @@ class Controller(object):
             self.training = not self.training
             self.key = ''
         if self._enable_auto_control:
-            if self.image is not None and self.intention is not None:
-                #start = time.time()
-                pred_control = policy.predict_control(self.image, self.intention, self.speed)[0]
-                #end = time.time()
-                #print ('=> predict time ', end - start)
+            if self._mode == 'DLM':
+                intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+            print('inside auto loop')
+            if policy.input_frame == 'NORMAL': # 1 cam
+                # convert ros msg -> cv2
+                img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                
+                pred_control = policy.predict_control(img, intention, self.speed)[0]
                 self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
                 self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
-                print('x: '+str(self.tele_twist.linear.x))
-                print('z: '+str(self.tele_twist.angular.z))
+                print(self.tele_twist)
+            elif policy.input_frame == 'MULTI':
+                # convert ros msg -> cv2 
+                # TODO: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
+                left_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me3_left,desired_encoding='bgr8'),(224,224))
+                front_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                right_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),(224,224))
+
+                # stack left,right -> 3channel
+                left_img = np.stack((left_img,)*3,axis=-1)
+                right_img = np.stack((right_img,)*3,axis=-1)
+
+                pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
+                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
+                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                print(self.tele_twist)
+
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
