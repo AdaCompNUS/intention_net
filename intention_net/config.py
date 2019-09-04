@@ -111,7 +111,7 @@ class IntentionNetConfig(object):
 
     # Constants should start from _ in order not to get conflict with flags
     _C = edict()
-    _C.NUM_INTENTIONS = 4
+    _C.NUM_INTENTIONS = 3
     # weight decay
     _C.WEIGHT_DECAY = 5e-5
     # momentum

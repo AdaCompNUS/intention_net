@@ -1,6 +1,7 @@
 import sys
-sys.path.append('/mnt/intention_net/control/')
-from pioneer_control import INTENTION
+sys.path.append('/mnt/intention_net/')
+from dataset import PioneerDataset as Dataset
+INTENTION = Dataset.INTENTION_MAPPING
 
 import intention_config as config
 import time
@@ -216,16 +217,9 @@ class IntentionPlanner(object):
 
 		#print 'path length', len(self.prev_path)
 		self.intention, turning_angle = self.parse_intention(self.prev_path)
-		if self.intention == config.LEFT:
-			self.intention_int = INTENTION['LEFT_TURN']
-		elif self.intention == config.RIGHT:
-			self.intention_int = INTENTION['RIGHT_TURN']
-		else:
-			self.intention_int = INTENTION['STRAIGHT_FORWARD']
-
+		
 		print ('replan intention', self.intention)
 		self.pub_intention.publish(self.intention)
-		self.pub_intention_int.publish(self.intention_int)
 		self.pub_turning.publish(turning_angle*180/3.14)
 		return self.intention
 

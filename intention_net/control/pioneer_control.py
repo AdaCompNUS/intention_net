@@ -20,7 +20,10 @@ from std_msgs.msg import Int32, Float32, String
 from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
-from intention_net.dataset import PioneerDataset as Dataset
+
+import sys
+sys.path.append('/mnt/intention_net')
+from dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
 SCREEN_SCALE = 1
@@ -244,14 +247,14 @@ class Controller(object):
         if self._enable_auto_control:
             if self._mode == 'DLM':
                 intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+                print(self.intention,intention,sep=' ')
             if policy.input_frame == 'NORMAL': # 1 cam
                 # convert ros msg -> cv2
                 img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
                 
                 pred_control = policy.predict_control(img, intention, self.speed)[0]
-                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
-                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
-                print(self.tele_twist)
+                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
+                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8 
             elif policy.input_frame == 'MULTI':
                 # convert ros msg -> cv2 
                 # TODO: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
@@ -266,8 +269,6 @@ class Controller(object):
                 pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
                 self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
                 self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
-                print(self.tele_twist)
-
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
@@ -378,7 +379,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single', num_intentions=4, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int', num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:
