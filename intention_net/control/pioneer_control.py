@@ -253,8 +253,8 @@ class Controller(object):
                 img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
                 
                 pred_control = policy.predict_control(img, intention, self.speed)[0]
-                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
-                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8 
+                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.85   
+                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.85
             elif policy.input_frame == 'MULTI':
                 # convert ros msg -> cv2 
                 # TODO: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
