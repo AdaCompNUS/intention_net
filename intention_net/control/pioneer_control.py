@@ -20,19 +20,15 @@ from std_msgs.msg import Int32, Float32, String
 from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
-from intention_net.dataset import PioneerDataset as Dataset
+
+import sys
+sys.path.append('/mnt/intention_net')
+from dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
 SCREEN_SCALE = 1
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
-INTENTION = {
-    0: 'STRAIGHT_FORWARD',
-    1: 'STRAIGHT_BACK',
-    2: 'LEFT_TURN',
-    3: 'RIGHT_TURN',
-    4: 'LANE_FOLLOW',
-}
 
 class Timer(object):
     def __init__(self):
@@ -56,8 +52,6 @@ class Timer(object):
 class Controller(object):
     tele_twist = Twist()
     def __init__(self, mode, scale_x, scale_z, rate):
-        global INTENTION
-        self.INTENTION_MAPPING = INTENTION
         self._mode = mode
         self._scale_x = scale_x
         self._scale_z = scale_z
@@ -275,8 +269,8 @@ class Controller(object):
                     right_img = np.stack((right_img,)*3,axis=-1)
 
                     pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
-                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
-                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
                     print(self.tele_twist)
 
         
@@ -355,7 +349,7 @@ class Controller(object):
             self.text_to_screen('Speed: {:.4f} m/s'.format(self.speed), pos=(150, WINDOW_HEIGHT-30))
         if self.intention is not None:
             if self._mode == 'DLM':
-                self.text_to_screen(INTENTION[self.intention])
+                self.text_to_screen(Dataset.INTENTION_MAPPING_NAME[self.intention])
             else:
                 surface = pygame.surfarray.make_surface(self.intention.swapaxes(0, 1))
                 self._display.blit(surface, (SCREEN_SCALE*(WINDOW_WIDTH-self.intention.shape[0])/2, 0))
@@ -389,7 +383,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=4, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int', num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:

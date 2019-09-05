@@ -1,5 +1,5 @@
 image: COM1_L1.jpg
-resolution: 0.136900
+resolution: 0.129000
 origin: [0.000000, 0.000000, 0.000000]
 negate: 0
 occupied_thresh: 0.10

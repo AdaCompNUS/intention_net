@@ -57,10 +57,16 @@ class BaseDataset(keras.utils.Sequence):
 
 class PioneerDataset(BaseDataset):
     INTENTION_MAPPING = {
-        'left' : 0,
-        'right': 1,
-        'forward':2,
-        'stop':3
+        'left' : 1,
+        'right': 2,
+        'forward':0,
+        'stop':3,
+    }
+    INTENTION_MAPPING_NAME = {
+        1: 'left',
+        2: 'right',
+        0: 'forward',
+        3: 'stop'
     }
     # only add dlm support here, you can extend to lpe easily refering to the HuaweiFinalDataset example
     NUM_CONTROL = 2
@@ -69,7 +75,7 @@ class PioneerDataset(BaseDataset):
     SCALE_VEL = 0.5
     SCALE_STEER = 0.5
 
-    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=True, max_samples=None, preprocess=True, input_frame='NORMAL'):
+    def __init__(self, data_dir, batch_size, num_intentions, mode, target_size=(224, 224), shuffle=False, max_samples=None, preprocess=True, input_frame='NORMAL'):
         super().__init__(data_dir, batch_size, num_intentions, mode, target_size, shuffle, max_samples, preprocess, input_frame)
 
     def init(self):
@@ -125,8 +131,8 @@ class PioneerDataset(BaseDataset):
                 X.append(img)
 
             if self.mode == 'DLM':
-                #lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
-                lbl_intention = lbl[self.data_idx['dlm']]
+                lbl_intention = self.INTENTION_MAPPING[lbl[self.data_idx['dlm']]]
+                #lbl_intention = lbl[self.data_idx['dlm']]
                 intention = to_categorical(lbl_intention, num_classes=self.num_intentions)
 
             control = [float(lbl[self.data_idx['current_velocity']])/self.SCALE_VEL, (float(lbl[self.data_idx['steering_wheel_angle']]))/self.SCALE_STEER]

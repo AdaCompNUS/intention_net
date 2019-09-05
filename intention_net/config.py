@@ -23,7 +23,7 @@ flags.DEFINE_string(
     help=help_wrap("The location of the validation data."))
 
 flags.DEFINE_string(
-    name="model_dir", short_name="md", default="/home/duong/Downloads/model",
+    name="model_dir", short_name="md", default="/home/duong/Downloads/model/single",
     help=help_wrap("The location of the model checkpoint data."))
 
 flags.DEFINE_string(
@@ -60,7 +60,7 @@ flags.DEFINE_integer(
     name="epochs_between_evals", short_name="ebe", default=10,
     help=help_wrap("The number of training epochs to run between evaluations"))
 
-flags.DEFINE_float('learning_rate', short_name="lr", default=1e-4,
+flags.DEFINE_float('learning_rate', short_name="lr", default=1e-3,
     help=help_wrap('Initial learning rate.'))
 
 flags.DEFINE_integer(
@@ -106,13 +106,13 @@ def load_config(cls):
 
 class IntentionNetConfig(object):
     # default params
-    train_epochs=300
-    batch_size=16
+    train_epochs=50
+    batch_size=32
 
     # Constants should start from _ in order not to get conflict with flags
     _C = edict()
-    _C.NUM_INTENTIONS = 4
+    _C.NUM_INTENTIONS = 3
     # weight decay
-    _C.WEIGHT_DECAY = 1e-5
+    _C.WEIGHT_DECAY = 5e-5
     # momentum
     _C.MOMENTUM = 0.9
