@@ -231,7 +231,7 @@ class IntentionPlanner(object):
 		else:
 			marker.header.frame_id = "/map"
 		marker.header.stamp = rospy.Time.now()
-		marker.type = Marker.ARROW;
+		marker.type = Marker.ARROW
 			#marker.pose = pu.pose(pos)
 		marker.scale.x = 0.2
 		marker.scale.y = 1

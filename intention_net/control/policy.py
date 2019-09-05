@@ -62,12 +62,9 @@ class Policy(object):
             i_intention = np.expand_dims(preprocess_input(intention), axis=0)
 
         if self.input_frame == 'NORMAL':
-            #TODO: Verify this 
-            #i_speed = np.array([[speed]])
             pred_control = self.model.predict(rgb + [i_intention])
             # pred_control = self.model.predict([rgb,i_intention])
         elif self.input_frame == 'MULTI':
-            #TODO: Implement the predict for multi camera
             pred_control = self.model.predict(rgb+[i_intention])
 
         if self.vis:

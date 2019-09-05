@@ -17,6 +17,7 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.optimizers import RMSprop, Adam, SGD
 from keras.callbacks import TensorBoard
 from keras.utils.training_utils import multi_gpu_model
+from keras_radam import RAdam
 
 from config import *
 from net import IntentionNet
@@ -177,6 +178,9 @@ def get_optimizer():
     elif flags_obj.optim == 'sgd':
         optimizer = SGD(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY, momentum=cfg.MOMENTUM)
         print ('=> use sgd optimizer')
+    elif flags_obj.otim == 'radam':
+        optimizer = RAdam()
+        print ('=> use RAdam optimizer')
     else:
         optimizer = Adam(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY)
         print ('=> use adam optimizer')

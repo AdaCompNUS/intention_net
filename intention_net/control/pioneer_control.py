@@ -245,30 +245,34 @@ class Controller(object):
             self.training = not self.training
             self.key = ''
         if self._enable_auto_control:
-            if self._mode == 'DLM':
-                intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
-                print(self.intention,intention,sep=' ')
-            if policy.input_frame == 'NORMAL': # 1 cam
-                # convert ros msg -> cv2
-                img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
-                
-                pred_control = policy.predict_control(img, intention, self.speed)[0]
-                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.85   
-                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.85
-            elif policy.input_frame == 'MULTI':
-                # convert ros msg -> cv2 
-                # TODO: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
-                left_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me3_left,desired_encoding='bgr8'),(224,224))
-                front_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
-                right_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),(224,224))
+            if not self.intention:
+                    print('estimate pose + goal....')
+            else:
+                if self._mode == 'DLM':
+                    intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+                if policy.input_frame == 'NORMAL': # 1 cam
+                    # convert ros msg -> cv2
+                    img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                    
+                    pred_control = policy.predict_control(img, intention, self.speed)[0]
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
+                elif policy.input_frame == 'MULTI':
+                    # convert ros msg -> cv2 
+                    # NOTE: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
+                    left_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me3_left,desired_encoding='bgr8'),(224,224))
+                    front_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                    right_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),(224,224))
 
-                # stack left,right -> 3channel
-                left_img = np.stack((left_img,)*3,axis=-1)
-                right_img = np.stack((right_img,)*3,axis=-1)
+                    # stack left,right -> 3channel
+                    left_img = np.stack((left_img,)*3,axis=-1)
+                    right_img = np.stack((right_img,)*3,axis=-1)
 
-                pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
-                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
-                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                    pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
+                    print(self.tele_twist)
+
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
