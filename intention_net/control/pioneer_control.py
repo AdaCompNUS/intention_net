@@ -269,8 +269,8 @@ class Controller(object):
                     right_img = np.stack((right_img,)*3,axis=-1)
 
                     pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
-                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
-                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.7
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.7
                     print(self.tele_twist)
 
         
@@ -383,7 +383,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int', num_intentions=3, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int/combine_turning_pillar/newer', num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:
