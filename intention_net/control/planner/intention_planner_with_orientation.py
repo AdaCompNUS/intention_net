@@ -11,6 +11,7 @@ from nav_msgs.msg import Path, Odometry
 from visualization_msgs.msg import Marker
 from rosgraph_msgs.msg import Clock
 from std_msgs.msg import Float32MultiArray, String, Float32, Int32
+from tf.transformations import euler_from_quaternion
 import random
 import math
 import rospy
@@ -199,7 +200,7 @@ class IntentionPlanner(object):
 		# print (cur_pose)
 		if not cur_pose or not self.goal_msg:
 			# print (cur_pose, self.goal_msg)
-			print ("no current pose or goal")
+			# print ("no current pose or goal")
 			return
 
 		if not self.use_topic_planner:
@@ -314,22 +315,26 @@ class IntentionPlanner(object):
 		intention = Float32MultiArray()
 		test = list()
 		current_angle = 0
-		if self.localizer.last_pose:			
-			current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
+		if self.localizer.last_pose:
+			orientation = pu.pose(self.localizer.current_pose).orientation
+            orientation_list = [orientation.x,orientation.y,orientation.z,orientation.w]
+            _,_,current_angle = euler_from_quaternion(orientation_list)
+			# current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
 			# current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
 		# ignore some beginning position
-		for _ in range(int(NUM_INTENTION/10)):
-			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-		for _ in range(NUM_INTENTION):
-			self.ahead_idx = get_valid_next_idx(self.ahead_idx)
-			delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
-			intention.data.append(delta)
-			# print("delta: %s"%(delta*180/3.14))
-			# print("current_angle: %s"%current_angle)
-		
+		# for _ in range(int(NUM_INTENTION/2)):
+		# 	self.ahead_idx = get_valid_next_idx(self.ahead_idx)
+		# for _ in range(10):
+			# self.ahead_idx = get_valid_next_idx(self.ahead_idx)
+			# delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
+			# intention.data.append(delta)
+        ahead_orientation = get_pair_angle(90,95)
+        turning_angle = pu.norm_angle(get_pair_angle(90,95)-current_angle)
+		print("ahead_orientation",ahead_orientation)
+		print("turning_angle",turning_angle)
+
 		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
-		
-		turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
+		#turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 
 		if turning_angle > TURNING_THRESHOLD:
 			intention = config.LEFT
