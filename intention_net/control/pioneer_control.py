@@ -247,6 +247,9 @@ class Controller(object):
         if self._enable_auto_control:
             if not self.intention:
                     print('estimate pose + goal....')
+            elif self.intention == 'stop':
+                self.tele_twist.linear.x = 0
+                self.tele_twist.angular.z = 0
             else:
                 if self._mode == 'DLM':
                     intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
@@ -271,8 +274,6 @@ class Controller(object):
                     pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
                     self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.7
                     self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.7
-                    print(self.tele_twist)
-
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:

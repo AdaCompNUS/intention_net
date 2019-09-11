@@ -60,7 +60,7 @@ class PioneerDataset(BaseDataset):
         'left' : 1,
         'right': 2,
         'forward':0,
-        'stop':3,
+        'stop':0,
     }
     INTENTION_MAPPING_NAME = {
         1: 'left',
