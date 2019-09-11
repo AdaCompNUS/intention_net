@@ -317,8 +317,8 @@ class IntentionPlanner(object):
 		current_angle = 0
 		if self.localizer.last_pose:
 			orientation = pu.pose(self.localizer.current_pose).orientation
-            orientation_list = [orientation.x,orientation.y,orientation.z,orientation.w]
-            _,_,current_angle = euler_from_quaternion(orientation_list)
+			orientation_list = [orientation.x,orientation.y,orientation.z,orientation.w]
+			_,_,current_angle = euler_from_quaternion(orientation_list)
 			# current_angle = pu.angle_pose_pair(self.localizer.last_pose, path[self.current_idx])
 			# current_angle = pu.angle_pose_pair(path[self.current_idx],path[self.current_idx+LOCAL_SHIFT])
 		# ignore some beginning position
@@ -328,8 +328,8 @@ class IntentionPlanner(object):
 			# self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 			# delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
 			# intention.data.append(delta)
-        ahead_orientation = get_pair_angle(90,95)
-        turning_angle = pu.norm_angle(get_pair_angle(90,95)-current_angle)
+		ahead_orientation = get_pair_angle(60,65)
+		turning_angle = pu.norm_angle(get_pair_angle(60,65)-current_angle)
 		print("ahead_orientation",ahead_orientation)
 		print("turning_angle",turning_angle)
 

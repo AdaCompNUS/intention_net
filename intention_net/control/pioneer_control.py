@@ -87,6 +87,7 @@ class Controller(object):
         self.key = None
         self.training = False
         self.scan = None
+        self.manual_intention = 'forward'
 
         # subscribe ros messages
         rospy.Subscriber('/mynteye/left/image_raw/compressed', CompressedImage, self.cb_left_img, queue_size=1, buff_size=2**10)
@@ -120,6 +121,7 @@ class Controller(object):
         self.control_pub = rospy.Publisher('/RosAria/cmd_vel', Twist, queue_size=1)
 
         # publishing as training data
+        self.pub_intention = rospy.Publisher('/test_intention',String,queue_size=1)
         self.pub_trajectory_index = rospy.Publisher('/train/trajectory_index',String,queue_size=1)
         self.pub_teleop_vel = rospy.Publisher('/train/cmd_vel', Twist, queue_size=1)
         self.pub_left_img = rospy.Publisher('/train/mynteye/left_img/compressed', CompressedImage, queue_size=1)
@@ -228,6 +230,18 @@ class Controller(object):
             print('toggle training mode to: %s'%(not self.training))
             if not self.training:
                 self.trajectory_index = self._random_string(15)
+         #STRAIGHT_FORWARD
+        if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
+            self.manual_intention =  'forward'
+            print('Intention is manually set to: forward')
+        #LEFT_TURN
+        if data.buttons[JOY_MAPPING['buttons']['lt']] == 1:
+            self.manual_intention = 'left'
+            print('Intention is manually set to: left')
+        #RIGHT_TURN
+        if data.buttons[JOY_MAPPING['buttons']['rt']] == 1:
+            self.manual_intention = 'right'
+            print('Intention is manually set to: right')
 
     def _random_string(self,n):
         chars = string.ascii_letters+string.digits
@@ -245,14 +259,15 @@ class Controller(object):
             self.training = not self.training
             self.key = ''
         if self._enable_auto_control:
-            if not self.intention:
+            if not self.manual_intention:
                     print('estimate pose + goal....')
             else:
                 if self._mode == 'DLM':
-                    intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+                    intention = Dataset.INTENTION_MAPPING[self.manual_intention] # map intention str => int
+                    print('intention: ',intention)
                 if policy.input_frame == 'NORMAL': # 1 cam
                     # convert ros msg -> cv2
-                    img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                    img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.right_img,desired_encoding='bgr8'),(224,224))
                     
                     pred_control = policy.predict_control(img, intention, self.speed)[0]
                     self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
@@ -277,6 +292,8 @@ class Controller(object):
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
             self._publish_as_trn()
+        
+        self.pub_intention.publish(self.manual_intention)
 
         # publish control
         self.control_pub.publish(self.tele_twist)
@@ -383,7 +400,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int/combine_turning_pillar/newer', num_intentions=3, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int/combine_turning_pillar/right', num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:
