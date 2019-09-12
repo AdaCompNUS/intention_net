@@ -6,10 +6,13 @@ import keyboard
 import time 
 import getch 
 import os
+import math
+import numpy as np
 
 LABEL_PATH = 'test/label2.txt'
 BASE = 'test/img'
-VALID_KEYS = ['a','l','r','x']
+VALID_KEYS = ['a','l','r','x','n']
+SLIDE_MAX = 100
 
 frame = list()
 dlm = list()
@@ -24,7 +27,7 @@ with open(LABEL_PATH,'r') as file:
 def display(i):
     fn = os.path.join(BASE,frame[i]+'.jpg')
     im = cv2.imread(fn)
-    cv2.putText(im,frame[i],bottomLeftCornerOfText,font,fontScale,fontColor,lineType)
+    cv2.putText(im,str(i),bottomLeftCornerOfText,font,fontScale,fontColor,lineType)
     cv2.putText(im,dlm[i], (80,100),font,fontScale,(0,255,0),lineType)
     return im
 
@@ -36,12 +39,26 @@ fontColor = (255,255,255)
 lineType = 2
 char = None
 
+def on_trackbar(val):
+    # i = val/SLIDE_MAX
+    # i = math.floor(i*len(frame))
+    pass 
+
 while True:
+    print('enter a key')
     if char is None:
         char = getch.getch()
     if char == 'x':
         print('exit...')
         break
+    elif char == 'n':
+        i = int(input())
+        im = display(i)
+        cv2.imshow('im',im)
+        char = str(chr(cv2.waitKey(0))) 
+        if char in VALID_KEYS:
+            cv2.destroyAllWindows()
+            continue
     elif char == 'a':
         slide = True 
         while True:
@@ -72,6 +89,6 @@ while True:
                 cv2.destroyAllWindows()
                 continue
         else:
-            print('invalid char: ',char,"please type in 'a','l','r','x'")
+            print('invalid char: ',char,"please type in 'a','l','r','x','n'")
             char = None
             
