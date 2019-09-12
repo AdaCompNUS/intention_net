@@ -294,7 +294,7 @@ class Controller(object):
         if self.training:
             self._publish_as_trn()
         
-        self.pub_intention.publish(self.manual_intention)
+        # self.pub_intention.publish(self.manual_intention)
 
         # publish control
         self.control_pub.publish(self.tele_twist)

@@ -21,6 +21,7 @@ from itertools import chain
 
 # import local
 from threadedgenerator import ThreadedGenerator
+from utils import undistort
 
 SENSORS = ['mynt_eye', 'web_cam']
 
@@ -54,7 +55,9 @@ TOPICS_IDX = {}
 CHUNK_SIZE = 1
 
 def imgmsg_to_cv2(msg):
-    return cv2.resize(CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+    im = CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
+    im = undistort(im)
+    return cv2.resize(im, (224, 224))
 
 def parse_bag(bagfn, intention_type):
     print (f'processing {bagfn} now')

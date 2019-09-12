@@ -1,3 +1,4 @@
+"""Used to stitch all camera image"""
 import cv2
 import numpy as np
 import sys
