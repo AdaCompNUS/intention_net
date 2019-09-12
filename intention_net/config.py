@@ -23,7 +23,7 @@ flags.DEFINE_string(
     help=help_wrap("The location of the validation data."))
 
 flags.DEFINE_string(
-    name="model_dir", short_name="md", default="/home/duong/Downloads/model",
+    name="model_dir", short_name="md", default="/home/duong/Downloads/model/multi",
     help=help_wrap("The location of the model checkpoint data."))
 
 flags.DEFINE_string(
@@ -37,7 +37,7 @@ flags.DEFINE_boolean(
     help=help_wrap("Whether to directly evaluted the learned model"))
 
 flags.DEFINE_string(
-    name='resume', short_name='r', default=None,
+    name='resume', short_name='r', default='/home/duong/Downloads/model/multi',
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
@@ -106,7 +106,7 @@ def load_config(cls):
 
 class IntentionNetConfig(object):
     # default params
-    train_epochs=300
+    train_epochs=100
     batch_size=16
 
     # Constants should start from _ in order not to get conflict with flags
