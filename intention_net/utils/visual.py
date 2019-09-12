@@ -2,15 +2,14 @@
 visual image and its intention
 """
 import cv2
-import keyboard
 import time 
 import getch 
 import os
 import math
 import numpy as np
 
-LABEL_PATH = 'test/label2.txt'
-BASE = 'test/img'
+LABEL_PATH = '/media/duong/Data10/duong/data/label.txt'
+BASE = '/media/duong/Data10/duong/data/denoise_data'
 VALID_KEYS = ['a','l','r','x','n']
 SLIDE_MAX = 100
 
@@ -39,11 +38,6 @@ fontColor = (255,255,255)
 lineType = 2
 char = None
 
-def on_trackbar(val):
-    # i = val/SLIDE_MAX
-    # i = math.floor(i*len(frame))
-    pass 
-
 while True:
     print('enter a key')
     if char is None:
@@ -65,7 +59,7 @@ while True:
             i = (i+1)%len(dlm)
             im = display(i)
             cv2.imshow('im',im)
-            char = cv2.waitKey(1000) 
+            char = cv2.waitKey(40) 
             if char != -1:
                 char = str(chr(char))
                 if char in VALID_KEYS and char != 'a':
