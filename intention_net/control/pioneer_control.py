@@ -261,6 +261,9 @@ class Controller(object):
         if self._enable_auto_control:
             if not self.manual_intention:
                     print('estimate pose + goal....')
+            elif self.intention == 'stop':
+                self.tele_twist.linear.x = 0
+                self.tele_twist.angular.z = 0
             else:
                 if self._mode == 'DLM':
                     intention = Dataset.INTENTION_MAPPING[self.manual_intention] # map intention str => int
@@ -286,8 +289,6 @@ class Controller(object):
                     pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
                     self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.7
                     self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.7
-                    print(self.tele_twist)
-
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
@@ -400,7 +401,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/model/single_3_int/combine_turning_pillar/right', num_intentions=3, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:

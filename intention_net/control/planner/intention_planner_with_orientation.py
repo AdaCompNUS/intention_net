@@ -328,25 +328,28 @@ class IntentionPlanner(object):
 			# self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 			# delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
 			# intention.data.append(delta)
-		ahead_orientation = get_pair_angle(60,65)
-		turning_angle = pu.norm_angle(get_pair_angle(60,65)-current_angle)
-		print("ahead_orientation",ahead_orientation)
-		print("turning_angle",turning_angle)
+		if len(path) > 65:
+			ahead_orientation = get_pair_angle(60,65)
+			turning_angle = pu.norm_angle(get_pair_angle(60,65)-current_angle)
+			print("ahead_orientation",ahead_orientation)
+			print("turning_angle",turning_angle)
 
-		self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
-		#turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
+			self.pub_cur_pose.publish(self.marker_strip(path[self.current_idx : self.current_idx+LOCAL_SHIFT*NUM_INTENTION]))
+			#turning_angle = reduce(lambda x, y: x + y, intention.data) / len(intention.data)
 
-		if turning_angle > TURNING_THRESHOLD:
-			intention = config.LEFT
-		elif turning_angle < -TURNING_THRESHOLD:
-			intention = config.RIGHT
+			if turning_angle > TURNING_THRESHOLD:
+				intention = config.LEFT
+			elif turning_angle < -TURNING_THRESHOLD:
+				intention = config.RIGHT
+			else:
+				intention = config.FORWARD
+			print('intention')
+			print(intention)
+			print('turning angle')
+			print(turning_angle)
+			return intention, turning_angle
 		else:
-			intention = config.FORWARD
-		print('intention')
-		print(intention)
-		print('turning angle')
-		print(turning_angle)
-		return intention, turning_angle
+			return "stop",0
 
 def main():
 	rospy.init_node("intention_planner")
