@@ -9,13 +9,16 @@ from functools import reduce
 import numpy as np
 import math
 
-# forward_weight, left_weight, right_weight, stop_weight
-# DEPENDS ON Dataset.INTENTION_MAPPING ORDER
-WEIGHT = np.array([1,3,3,4]).reshape(1,-1)
 WINDOW_SIZE = 15
 LABEL_PATH = 'test/label.txt'
 COMPARE_PATH = 'test/compare.txt'
 INTERPOLATE_PATH = 'test/interpolated.txt'
+# forward_weight, left_weight, right_weight, stop_weight
+# DEPENDS ON Dataset.INTENTION_MAPPING ORDER
+WEIGHT = np.array([1,3,3,4]).reshape(1,-1)
+# increase weight for nearest point
+POINT_WEIGHT = np.ones((WINDOW_SIZE,1))
+
 
 def window(seq, n=WINDOW_SIZE):
     if len(seq) < n:
@@ -43,6 +46,7 @@ def denoise_intention(intentions):
     mapped_intention = np.array(list(map(lambda x: Dataset.INTENTION_MAPPING[x],intentions))).reshape(-1)
     one_hot = id2onehot(mapped_intention,len(Dataset.INTENTION_MAPPING))
     weighted = one_hot*WEIGHT
+    print(weighted.shape)
     voted_value = np.sum(weighted,axis=0)
     intention = np.argmax(voted_value)
     return Dataset.INTENTION_MAPPING_NAME[intention]

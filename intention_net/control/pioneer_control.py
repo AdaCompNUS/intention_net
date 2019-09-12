@@ -23,6 +23,8 @@ from cv_bridge import CvBridge
 
 import sys
 sys.path.append('/mnt/intention_net')
+sys.path.append('../utils')
+from undistort import undistort
 from dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
@@ -186,7 +188,7 @@ class Controller(object):
         self.intention = msg.data
 
     def cb_lpe_intention(self, msg):
-        self.intention = cv2.resize(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+        self.intention = cv2.resize(undistort(CvBridge().imgmsg_to_cv2(msg, desired_encoding='bgr8')), (224, 224))
 
     def cb_speed(self, msg):
         self.speed = msg.data
@@ -255,7 +257,7 @@ class Controller(object):
                     intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
                 if policy.input_frame == 'NORMAL': # 1 cam
                     # convert ros msg -> cv2
-                    img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8')),(224,224))
                     
                     pred_control = policy.predict_control(img, intention, self.speed)[0]
                     self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
