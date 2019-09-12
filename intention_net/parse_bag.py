@@ -13,7 +13,7 @@ import numpy as np
 from tqdm import tqdm
 from munch import Munch
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image, Imu
+from sensor_msgs.msg import Image, Imu, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32
 from toolz import partition_all
@@ -21,14 +21,15 @@ from itertools import chain
 
 # import local
 from threadedgenerator import ThreadedGenerator
+from utils.undistort import undistort
 
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['/train/mynteye/left_img/compressed', '/train/mynteye/right_img/compressed',\
-        '/train/mynteye_1/left_img/compressed', '/train/mynteye_1/right_img/compressed',\
-        '/train/mynteye_2/left_img/compressed', '/train/mynteye_2/right_img/compressed',\
-        '/train/mynteye_3/left_img/compressed', '/train/mynteye_3/right_img/compressed'],
+    'RGBS' : ['/train/mynteye/left_img/compressed', '/train/mynteye/right_img/compressed'],\
+        #'/train/mynteye_1/left_img/compressed', '/train/mynteye_1/right_img/compressed',\
+        #'/train/mynteye_2/left_img/compressed', '/train/mynteye_2/right_img/compressed',\
+        #'/train/mynteye_3/left_img/compressed', '/train/mynteye_3/right_img/compressed'],
     'DEPTHS' : ['/train/mynteye/depth_img/compressed','/train/mynteye_1/depth_img/compressed','/train/mynteye_2/depth_img/compressed','/train/mynteye_3/depth_img/compressed'],
 }
 
@@ -54,7 +55,9 @@ TOPICS_IDX = {}
 CHUNK_SIZE = 1
 
 def imgmsg_to_cv2(msg):
-    return cv2.resize(CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8'), (224, 224))
+    im = CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
+    im = undistort(im)
+    return cv2.resize(im, (224, 224))
 
 def parse_bag(bagfn, intention_type):
     print (f'processing {bagfn} now')
