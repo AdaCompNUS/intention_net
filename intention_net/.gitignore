@@ -5,3 +5,4 @@ __pycache*
 log*
 carla*
 huawei*
+test*/
