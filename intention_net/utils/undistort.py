@@ -47,7 +47,8 @@ def undistort(img,param=LEFT_CAMERA_INFO):
     mapx = np.zeros(img.shape)
     mapy = np.zeros(img.shape)
 
-    H, W, _ = img.shape
+    H = img.shape[0]
+    W = img.shape[1]
 
     # Initialize self.mapx and self.mapy (updated)
     mapx, mapy = cv2.initUndistortRectifyMap(camera_matrix, 
