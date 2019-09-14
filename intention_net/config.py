@@ -37,7 +37,7 @@ flags.DEFINE_boolean(
     help=help_wrap("Whether to directly evaluted the learned model"))
 
 flags.DEFINE_string(
-    name='resume', short_name='r', default=None,
+    name='resume', short_name='r', default='/home/duong/Downloads/model/multi',
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
@@ -111,7 +111,7 @@ class IntentionNetConfig(object):
 
     # Constants should start from _ in order not to get conflict with flags
     _C = edict()
-    _C.NUM_INTENTIONS = 3
+    _C.NUM_INTENTIONS = 4
     # weight decay
     _C.WEIGHT_DECAY = 5e-5
     # momentum

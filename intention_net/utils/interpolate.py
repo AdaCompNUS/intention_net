@@ -9,16 +9,22 @@ from functools import reduce
 import numpy as np
 import math
 
-WINDOW_SIZE = 15
-LABEL_PATH = 'test/label.txt'
-COMPARE_PATH = 'test/compare.txt'
-INTERPOLATE_PATH = 'test/interpolated.txt'
+WINDOW_SIZE = 61
+LABEL_PATH = '/data/data/uninterpolate_data.txt'
+COMPARE_PATH = '/data/compare.txt'
+INTERPOLATE_PATH = '/data/data/interpolated_data.txt'
 # forward_weight, left_weight, right_weight, stop_weight
 # DEPENDS ON Dataset.INTENTION_MAPPING ORDER
-WEIGHT = np.array([1,3,3,4]).reshape(1,-1)
-# increase weight for nearest point
+WEIGHT = np.array([1,40,40,9]).reshape(1,-1)
 POINT_WEIGHT = np.ones((WINDOW_SIZE,1))
-
+POINT_WEIGHT[21] = 1.4
+POINT_WEIGHT[22] = 1.3
+POINT_WEIGHT[23] = 1.2
+POINT_WEIGHT[24] = 1.1
+POINT_WEIGHT[19] = 1.4
+POINT_WEIGHT[18] = 1.3
+POINT_WEIGHT[17] = 1.2
+POINT_WEIGHT[16] = 1.1
 
 def window(seq, n=WINDOW_SIZE):
     if len(seq) < n:
@@ -45,8 +51,12 @@ def id2onehot(indices,n_classes=4):
 def denoise_intention(intentions):
     mapped_intention = np.array(list(map(lambda x: Dataset.INTENTION_MAPPING[x],intentions))).reshape(-1)
     one_hot = id2onehot(mapped_intention,len(Dataset.INTENTION_MAPPING))
+<<<<<<< HEAD
+    weighted = one_hot*WEIGHT*POINT_WEIGHT
+=======
     weighted = one_hot*WEIGHT
     print(weighted.shape)
+>>>>>>> 9ad37c320c327ee563909cd253ee58e49abdcd17
     voted_value = np.sum(weighted,axis=0)
     intention = np.argmax(voted_value)
     return Dataset.INTENTION_MAPPING_NAME[intention]
