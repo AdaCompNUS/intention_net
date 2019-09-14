@@ -7,7 +7,10 @@ from keras.layers import (
         Dropout,
         Lambda,
         concatenate,
+        BatchNormalization,
         )
+from keras.layers import Activation
+from keras.layers.convolutional import Conv2D
 from keras.models import Sequential, Model
 from keras import backend as K
 
@@ -120,7 +123,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
             model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, lpe_input, speed_input], outputs=control)
 
     return model
-
+    
 def test():
     from keras.preprocessing.image import load_img, img_to_array
     from keras.applications.resnet50 import preprocess_input
