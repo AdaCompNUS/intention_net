@@ -275,8 +275,8 @@ class Controller(object):
                     img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8')),(224,224))
                     
                     pred_control = policy.predict_control(img, intention, self.speed)[0]
-                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
-                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.5
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.5
                 elif policy.input_frame == 'MULTI':
                     # convert ros msg -> cv2 
                     # NOTE: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
@@ -403,7 +403,7 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=3, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir='/data/data_correct_intention', num_intentions=4, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
     if model_dir == None:
