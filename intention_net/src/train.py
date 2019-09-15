@@ -6,13 +6,14 @@ sys.path.append('/mnt/intention_net')
 
 import torch
 from torch.optim import Adam,SGD,RMSprop
+from torch.optim.lr_scheduler import ExponentialLR
 from torch.utils.data import DataLoader
 from torch import nn
 from torchvision import transforms
 from torch.nn import functional as F
 
-from ignite.contrib.handlers import ProgressBar
-from ignite.engine import Engine, Events, create_supervised_evaluator, create_supervised_trainer
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
+from ignite.engine import Engine, Events
 from ignite.handlers import ModelCheckpoint,Timer
 from ignite.metrics import Loss
 
@@ -58,7 +59,7 @@ def create_summary_writer(model,data_loader,log_dir):
         print('Failed to save graph: {}'.format(e))
     return writer
 
-def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_path='model.pth'):
+def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_loader,val_loader = get_dataloader(train_dir,val_dir,num_workers=num_workers,batch_size=batch_size,shuffle=shuffle)
     model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
@@ -68,10 +69,12 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     check_manual_seed(seed)
     #TODO: change to RAdam
     optim = Adam(model.parameters(),lr=learning_rate)
+    lr_scheduler = ExponentialLR(optim,gamma=0.95)
+    checkpoints = ModelCheckpoint('models','Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
 
     def update_fn(engine, batch):
         model.train()
-        if engine.state.iteration-1 % accumulation_steps == 0:
+        if (engine.state.iteration-1) % accumulation_steps == 0:
             #engine.state.cummulative_loss = 0.0
             optim.zero_grad()
 
@@ -82,16 +85,16 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
             elem = elem.to(device)
 
         y_pred = model(*x)
-        # if engine.state.iteration % 16:
-        #     print(y)
-        #     print(y_pred)
+        # if engine.state.iteration % 4:
+        #     print('target',y)
+        #     print('pred',y_pred)
         #     print(x[0])
-        loss = criterion(y_pred, y) / accumulation_steps
+        loss = torch.sqrt(criterion(y_pred, y)) / accumulation_steps
         loss.backward()
 
         #engine.state.cummulative_loss += loss
 
-        if engine.state.iteration-1 % accumulation_steps == 0:
+        if (engine.state.iteration-1) % accumulation_steps == 0:
             optim.step()
 
         return loss.item()
@@ -102,8 +105,10 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
         x,y = batch
         
-        x.to(device)
-        y.to(device)
+        for elem in x:
+            elem = elem.to(device)
+        for elem in y:
+            elem = elem.to(device)
 
         y_pred = model(*x)
         mse_loss = F.mse_loss(y_pred,y)
@@ -113,6 +118,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         engine.state.metrics['mae'] = mae_loss
 
     trainer = Engine(update_fn)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED,checkpoints,{'model':model})
     evaluator = Engine(evaluate_fn)
     
     @trainer.on(Events.ITERATION_COMPLETED)
@@ -131,12 +137,14 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
         writer.add_scalar("training/mse", mse, engine.state.epoch)
         writer.add_scalar("training/mae", mae, engine.state.epoch)
-        torch.save(model,save_path)
-            
+
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def update_lr_scheduler(engine):
+        lr_scheduler.step()
+        print('learning rate is: {:6f}'.format(lr_scheduler.get_lr()[0]))
+
     trainer.run(train_loader,max_epochs=num_epochs)
     writer.close()
-
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -144,9 +152,9 @@ if __name__ == "__main__":
                         help='input batch size for training (default: 16)')
     parser.add_argument('--val_batch_size', type=int, default=16,
                         help='input batch size for validation (default: 1000)')
-    parser.add_argument('--num_epochs', type=int, default=10,
+    parser.add_argument('--num_epochs', type=int, default=1000,
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=1e-3,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate (default: 0.001)')
     parser.add_argument('--log_interval', type=int, default=2,
                         help='how many batches to wait before logging training status')
@@ -158,7 +166,6 @@ if __name__ == "__main__":
     parser.add_argument('--num_intentions',type=int,default=4,help="number of intentions")
     parser.add_argument('--num_controls',type=int,default=2,help="number of controls")
     parser.add_argument('--hidden_dim',type=int,default=256,help="hidden size of image embedded")
-    parser.add_argument('--save_path',type=str,default='/home/duong/Downloads/data_correct_intention/model.pth',help='Path to save model')
     parser.add_argument('--accumulation_steps',type=int,default=1,help="number of accumulation steps for gradient update")
     args = parser.parse_args()
 
@@ -166,25 +173,4 @@ if __name__ == "__main__":
         num_epochs=args.num_epochs,batch_size=args.batch_size,
         shuffle=args.shuffle,num_controls=args.num_controls,num_intentions=args.num_intentions,
         hidden_dim=args.hidden_dim,log_interval=args.log_interval,log_dir=args.log_dir,seed=2605,
-        accumulation_steps=args.accumulation_steps,save_path=args.save_path)
-
-# def update_fn(engine, batch):
-#     model.train()
-
-#     if engine.state.iteration % accumulation_steps == 0:
-#         optimizer.zero_grad()
-
-#     x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
-#     y_pred = model(x)
-#     loss = criterion(y_pred, y) / accumulation_steps
-#     loss.backward()
-
-#     if engine.state.iteration % accumulation_steps == 0:
-#         optimizer.step()
-
-#     return loss.item()
-
-# trainer = Engine(update_fn)
-
-# def train(seed,device):
-    # check_manual_seed(seed)
+        accumulation_steps=args.accumulation_steps)

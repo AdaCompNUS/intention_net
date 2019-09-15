@@ -5,6 +5,7 @@ import os
 from PIL import Image
 from skimage import io, transform
 from skimage.color import rgb2gray
+import numpy as np 
 
 def read_csv(path):
     data = dict()
@@ -62,13 +63,13 @@ class MultiCamPioneerDataset(Dataset):
         dm_im_path = osp.join(self.data_dir,self.BASE_DIR,self.FRONT_DEPTH_DIR,fn+".jpg")
         dr_im_path = osp.join(self.data_dir,self.BASE_DIR,self.RIGHT_DEPTH_DIR,fn+".jpg")
 
-        lbnw = io.imread(lbnw_im_path)/255
-        mrgb = io.imread(mbnw_im_path)
+        lbnw = np.array(Image.open(lbnw_im_path))/255.0
+        mrgb = np.array(Image.open(mbnw_im_path))
         mbnw = rgb2gray(mrgb)
-        rbnw = io.imread(rbnw_im_path)/255
-        dl = io.imread(dl_im_path)/255
-        dm = io.imread(dm_im_path)/255
-        dr = io.imread(dr_im_path)/255
+        rbnw = np.array(Image.open(rbnw_im_path))/255.0
+        dl = np.array(Image.open((dl_im_path)))/255.0
+        dm = np.array(Image.open((dm_im_path)))/255.0
+        dr = np.array(Image.open((dr_im_path)))/255.0
 
         if self.transform:
             lbnw = self.transform(lbnw)
@@ -77,7 +78,7 @@ class MultiCamPioneerDataset(Dataset):
             dl = self.transform(dl)
             dm = self.transform(dm)
             dr = self.transform(dr)
-        
+
         intention = torch.tensor(intention).long()
         lbnw = torch.tensor(lbnw).float().unsqueeze(0)
         mbnw = torch.tensor(mbnw).float().unsqueeze(0)
