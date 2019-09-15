@@ -7,7 +7,10 @@ from keras.layers import (
         Dropout,
         Lambda,
         concatenate,
+        BatchNormalization,
         )
+from keras.layers import Activation
+from keras.layers.convolutional import Conv2D
 from keras.models import Sequential, Model
 from keras import backend as K
 
@@ -63,7 +66,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
 
         rgbl_feat = Dropout(DROPOUT)(rgbl_feat)
         rgbl_feat = Dense(512,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbl_feat)
- 
+
         rgbm_feat = Dropout(DROPOUT)(rgbm_feat)
         rgbm_feat = Dense(1024,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbm_feat)
         
