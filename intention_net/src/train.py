@@ -77,9 +77,9 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
         x, y = batch
         for elem in x:
-            elem.to(device)
+            elem = elem.to(device)
         for elem in y:
-            elem.to(device)
+            elem = elem.to(device)
 
         y_pred = model(*x)
         # if engine.state.iteration % 16:

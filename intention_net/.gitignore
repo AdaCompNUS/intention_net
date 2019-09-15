@@ -1,8 +1,11 @@
 model*
+!model.py
 output*
 tiles*
 __pycache*
 log*
 carla*
 huawei*
+runs/
+logs/
 test*/
