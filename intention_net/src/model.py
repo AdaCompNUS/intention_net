@@ -88,11 +88,11 @@ class Predictor(nn.Module):
         self.rbnw_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
 
         self.linear1 = nn.Linear(2*hidden_dim,256,bias=False)
-        self.linear1_bn = nn.BatchNorm1d(256)
+        self.linear1_ln = nn.LayerNorm(256)
         self.linear2 = nn.Linear(256,64,bias=False)
-        self.linear2_bn = nn.BatchNorm1d(64)
+        self.linear2_ln = nn.LayerNorm(64)
         self.linear3 = nn.Linear(64,32,bias=False)
-        self.linear3_bn = nn.BatchNorm1d(32)
+        self.linear3_ln = nn.LayerNorm(32)
         self.linear4 = nn.Linear(32,self.num_controls*self.num_intentions)
     
     def forward(self,lbnw,mbnw,rbnw,score,dl_feat,dm_feat,dr_feat):
@@ -114,9 +114,9 @@ class Predictor(nn.Module):
         # calculate combined feature
         feat = torch.matmul(score,feat)
         feat = feat.squeeze()
-        feat = self.linear1_bn(F.leaky_relu(self.linear1(feat)))
-        feat = self.linear2_bn(F.leaky_relu(self.linear2(feat)))
-        feat = self.linear3_bn(F.leaky_relu(self.linear3(feat)))
+        feat = self.linear1_ln(F.leaky_relu(self.linear1(feat)))
+        feat = self.linear2_ln(F.leaky_relu(self.linear2(feat)))
+        feat = self.linear3_ln(F.leaky_relu(self.linear3(feat)))
         feat = self.linear4(feat) # intention_0: velocity,angle = feat[0],feat[1]; intention_1: velocity,angle = feat[2],feat[3]
 
         return feat
@@ -142,7 +142,6 @@ class DepthIntentionEncodeModel(nn.Module):
             masked = np.concatenate([masked,one_hot],axis=1)
         masked = torch.tensor(masked)
         masked = masked.view(-1,self.num_controls,self.num_intentions)
-
         feat = torch.sum(feat.mul(masked),dim=-1)
         return feat
 
@@ -156,15 +155,15 @@ def test():
     dl = torch.tensor(np.array(Image.open("../test/depth_0.jpg"))).expand(1,1,224,224).float()/255.0
     dm = torch.tensor(np.array(Image.open("../test/depth_2.jpg"))).expand(1,1,224,224).float()/255.0
     dr = torch.tensor(np.array(Image.open("../test/depth_3.jpg"))).expand(1,1,224,224).float()/255.0
-    lbnw = torch.tensor(np.array(Image.open("../test/rgb_4.jpg"))).expand(1,1,224,224).float()/255.0
+    lbnw = torch.tensor(np.array(Image.open("../test/rgb_5.jpg"))).expand(1,1,224,224).float()/255.0
     mbnw = torch.tensor(np.array(Image.open("../test/rgb_4.jpg"))).expand(1,1,224,224).float()/255.0
-    rbnw = torch.tensor(np.array(Image.open("../test/rgb_4.jpg"))).expand(1,1,224,224).float()/255.0
-    intention = torch.tensor(0).long()
+    rbnw = torch.tensor(np.array(Image.open("../test/rgb_7.jpg"))).expand(1,1,224,224).float()/255.0
+    intention = torch.tensor([0]).long()
     net = DepthIntentionEncodeModel()
     feat = net(intention,dl,dm,dr,lbnw,mbnw,rbnw)
     print(feat)
     opt = Adam(net.parameters())
-    y = torch.tensor([100,-100]).float()
+    y = torch.tensor([100,-5]).float()
     criterion = nn.MSELoss()
     for _ in range(10000):
         net.train()
