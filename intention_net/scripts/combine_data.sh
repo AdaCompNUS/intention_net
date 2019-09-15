@@ -11,8 +11,8 @@
 if ! [ -d ${2} ]; then
     mkdir ${2}
 fi
-for d in "${1}/*/"; do
-    sed -e 1d ${d}label.txt >> ${2}"label.txt"
+for d in "${1}/*/data/"; do
+    cat ${d}label.txt >> ${2}"label.txt"
     mkdir ${2}rgb_0
-    cp -r ${d}"rgb_0" ${2}"rgb_0"
+    cp -r ${d}"rgb_0" ${2}
 done

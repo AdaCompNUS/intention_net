@@ -15,7 +15,7 @@ help_wrap = functools.partial(flags.text_wrap, length=80, indent="",
 absl_app.HelpshortFlag.SHORT_NAME = "h"
 # base flags
 flags.DEFINE_string(
-    name="data_dir", short_name="dd", default="/home/duong/Downloads/data_4_sensors",
+    name="data_dir", short_name="dd", default="/home/duong/Downloads/data_correct_intention",
     help=help_wrap("The location of the input data."))
 
 flags.DEFINE_string(
@@ -23,7 +23,7 @@ flags.DEFINE_string(
     help=help_wrap("The location of the validation data."))
 
 flags.DEFINE_string(
-    name="model_dir", short_name="md", default="/home/duong/Downloads/model/single",
+    name="model_dir", short_name="md", default="/home/duong/Downloads/data_correct_intention",
     help=help_wrap("The location of the model checkpoint data."))
 
 flags.DEFINE_string(
@@ -37,11 +37,11 @@ flags.DEFINE_boolean(
     help=help_wrap("Whether to directly evaluted the learned model"))
 
 flags.DEFINE_string(
-    name='resume', short_name='r', default='/home/duong/Downloads/model/multi',
+    name='resume', short_name='r', default='/home/duong/Downloads/data_correct_intention/NORMAL_DLM_latest_model.h5',
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
-    name="optim", short_name="otm", default="rmsprop",
+    name="optim", short_name="otm", default="radam",
     help=help_wrap("Optimizer type for training"))
 
 flags.DEFINE_integer(
@@ -60,7 +60,7 @@ flags.DEFINE_integer(
     name="epochs_between_evals", short_name="ebe", default=10,
     help=help_wrap("The number of training epochs to run between evaluations"))
 
-flags.DEFINE_float('learning_rate', short_name="lr", default=1e-3,
+flags.DEFINE_float('learning_rate', short_name="lr", default=5e-5,
     help=help_wrap('Initial learning rate.'))
 
 flags.DEFINE_integer(

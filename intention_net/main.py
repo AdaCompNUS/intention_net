@@ -178,7 +178,7 @@ def get_optimizer():
     elif flags_obj.optim == 'sgd':
         optimizer = SGD(lr=flags_obj.learning_rate, decay=cfg.WEIGHT_DECAY, momentum=cfg.MOMENTUM)
         print ('=> use sgd optimizer')
-    elif flags_obj.otim == 'radam':
+    elif flags_obj.optim == 'radam':
         optimizer = RAdam()
         print ('=> use RAdam optimizer')
     else:

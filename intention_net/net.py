@@ -13,7 +13,7 @@ from keras import backend as K
 
 INIT='he_normal'
 L2=1e-5
-DROPOUT=0.5
+DROPOUT=0.3
 
 def filter_control(args):
     outs, intention = args[:-1], args[-1]
