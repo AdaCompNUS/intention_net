@@ -58,7 +58,7 @@ def create_summary_writer(model,data_loader,log_dir):
         print('Failed to save graph: {}'.format(e))
     return writer
 
-def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4):
+def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_path='model.pth'):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_loader,val_loader = get_dataloader(train_dir,val_dir,num_workers=num_workers,batch_size=batch_size,shuffle=shuffle)
     model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
@@ -131,7 +131,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
         writer.add_scalar("training/mse", mse, engine.state.epoch)
         writer.add_scalar("training/mae", mae, engine.state.epoch)
-    
+        torch.save(model,save_path)
+            
     trainer.run(train_loader,max_epochs=num_epochs)
     writer.close()
 
@@ -151,12 +152,13 @@ if __name__ == "__main__":
                         help='how many batches to wait before logging training status')
     parser.add_argument("--log_dir", type=str, default="logs",
                         help="log directory for Tensorboard log output")
-    parser.add_argument('--train_dir',type=str,default="/Users/lhduong/Downloads/sample",help="path to train data directory")
-    parser.add_argument('--val_dir',type=str,default="/Users/lhduong/Downloads/val",help="path to val data directory")
+    parser.add_argument('--train_dir',type=str,default="/home/duong/Downloads/data_correct_intention/data",help="path to train data directory")
+    parser.add_argument('--val_dir',type=str,default="/home/duong/Downloads/data_correct_intention/val",help="path to val data directory")
     parser.add_argument('--shuffle',type=bool,default=False,help="Choose to shuffle the training set")
     parser.add_argument('--num_intentions',type=int,default=4,help="number of intentions")
     parser.add_argument('--num_controls',type=int,default=2,help="number of controls")
     parser.add_argument('--hidden_dim',type=int,default=256,help="hidden size of image embedded")
+    parser.add_argument('--save_path',type=str,default='/home/duong/Downloads/data_correct_intention/model.pth',help='Path to save model')
     parser.add_argument('--accumulation_steps',type=int,default=1,help="number of accumulation steps for gradient update")
     args = parser.parse_args()
 
@@ -164,7 +166,7 @@ if __name__ == "__main__":
         num_epochs=args.num_epochs,batch_size=args.batch_size,
         shuffle=args.shuffle,num_controls=args.num_controls,num_intentions=args.num_intentions,
         hidden_dim=args.hidden_dim,log_interval=args.log_interval,log_dir=args.log_dir,seed=2605,
-        accumulation_steps=args.accumulation_steps)
+        accumulation_steps=args.accumulation_steps,save_path=args.save_path)
 
 # def update_fn(engine, batch):
 #     model.train()
