@@ -81,11 +81,11 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
             optim.zero_grad()
 
         x, y = batch
+        inp = []
         for elem in x:
-            elem = elem.to(device)
-        y = y.to(device)
-
-        y_pred = model(*x)
+            inp.append(elem.to(device))
+        y = y.cuda()
+        y_pred = model(*inp)
         # if engine.state.iteration % 4:
         #     print('target',y)
         #     print('pred',y_pred)
@@ -148,7 +148,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=16,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='input batch size for training (default: 16)')
     parser.add_argument('--val_batch_size', type=int, default=16,
                         help='input batch size for validation (default: 1000)')
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument('--accumulation_steps',type=int,default=1,help="number of accumulation steps for gradient update")
     args = parser.parse_args()
 
-    run(train_dir=args.train_dir,val_dir=None,learning_rate=args.lr,num_workers=1,
+    run(train_dir=args.train_dir,val_dir=None,learning_rate=args.lr,num_workers=4,
         num_epochs=args.num_epochs,batch_size=args.batch_size,
         shuffle=args.shuffle,num_controls=args.num_controls,num_intentions=args.num_intentions,
         hidden_dim=args.hidden_dim,log_interval=args.log_interval,log_dir=args.log_dir,seed=2605,
