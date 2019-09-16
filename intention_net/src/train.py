@@ -61,10 +61,13 @@ def create_summary_writer(model,data_loader,log_dir):
         print('Failed to save graph: {}'.format(e))
     return writer
 
-def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_model='models'):
+def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_model='models',resume=None):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_loader,val_loader = get_dataloader(train_dir,val_dir,num_workers=num_workers,batch_size=batch_size,shuffle=shuffle)
-    model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
+    if resume:
+        model = torch.load(resume)
+    else:
+        model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
     model = model.to(device)
     writer = create_summary_writer(model,train_loader,log_dir)
     criterion = nn.MSELoss()
@@ -89,7 +92,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         #     print('target',y)
         #     print('pred',y_pred)
         #     print(x[0])
-        loss = torch.sqrt(criterion(y_pred, y)) / accumulation_steps
+        loss = criterion(y_pred, y) / accumulation_steps
         loss.backward()
 
         #engine.state.cummulative_loss += loss
@@ -119,8 +122,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     trainer.add_event_handler(Events.EPOCH_COMPLETED,checkpoints,{'model':model})
     avg_loss = RunningAverage(output_transform=lambda x: x,alpha=0.1)
     avg_loss.attach(trainer, 'running_avg_loss')
-    pbar = ProgressBar()
-    pbar.attach(trainer)
+    pbar = ProgressBar(bar_format='{desc}[{n_fmt}/{total_fmt}] {percentage:3.0f}%|{bar}{postfix} [{elapsed}<{remaining}]')
+    pbar.attach(trainer,['running_avg_loss'])
 
     evaluator = Engine(evaluate_fn)
     pbar.attach(evaluator)
@@ -171,6 +174,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_controls',type=int,default=2,help="number of controls")
     parser.add_argument('--hidden_dim',type=int,default=256,help="hidden size of image embedded")
     parser.add_argument('--save_model',type=str,default='models',help='directory to save checkpoint')
+    parser.add_argument('--resume',type=str,default=None,help='path to saved model')
     parser.add_argument('--accumulation_steps',type=int,default=1,help="number of accumulation steps for gradient update")
     args = parser.parse_args()
 
@@ -178,4 +182,4 @@ if __name__ == "__main__":
         num_epochs=args.num_epochs,batch_size=args.batch_size,
         shuffle=args.shuffle,num_controls=args.num_controls,num_intentions=args.num_intentions,
         hidden_dim=args.hidden_dim,log_interval=args.log_interval,log_dir=args.log_dir,seed=2605,
-        accumulation_steps=args.accumulation_steps,save_model=args.save_model)
+        accumulation_steps=args.accumulation_steps,save_model=args.save_model,resume=args.resume)
