@@ -7,17 +7,30 @@ from torch.utils import model_zoo
 from torch.optim import Adam
 from tensorboardX import SummaryWriter
 from keras.utils import to_categorical
-from torchvision.models import resnet18 as ResNet
+from torchvision.models import resnet18 
 
 class Resnet18Extractor(nn.Module):
-    def __init__(self,hidden_dim,droprate=0.2):
+    def __init__(self,hidden_dim=256,droprate=0.2):
         super(Resnet18Extractor,self).__init__()
         self.hidden_dim = hidden_dim
-        resnet = ResNet(True)
-        self.model = torch.nn.Sequential(*(list(resnet.children())[:-1]))
+        resnet = resnet18(True)
+        layers = list(resnet.children())[:-1]
+        self.linear = nn.Linear(512,self.hidden_dim)
+        self.model = torch.nn.Sequential(*layers)
         
     def forward(self,x):
-        return self.model(x)
+        # check if the feated input is 1 dim or not
+        if x.size(1) == 1:
+            x = torch.cat([x,x,x],dim=1)
+        
+        # feed to resnet18
+        x = self.model(x)
+        x = x.view(-1,512)
+
+        # last fc layer
+        x = self.linear(x)
+
+        return x
 
 class OneChannelFeat(nn.Module):
     def __init__(self,hidden_dim=512,droprate=0.2):
@@ -57,29 +70,51 @@ class OneChannelFeat(nn.Module):
         x = self.linear(x)
         return x
 
+class PositionEmbedding(nn.Module):
+    def __init__(self,num_pos=3,hidden_dim=256):
+        super(PositionEmbedding,self).__init__()
+        self.num_pose = 3
+        self.hidden_dim = hidden_dim
+        self.embedding = torch.nn.Embedding(self.num_pose,self.hidden_dim)
+    
+    def forward(self,x):
+        return self.embedding(x)
+
 class AttentionScore(nn.Module):
-    def __init__(self,num_intentions=4,hidden_dim=512):
+    def __init__(self,num_intentions=4,hidden_dim=512,feat_model_name='resnet18',pos_embedding=None):
         super(AttentionScore,self).__init__()
         self.num_intentions = num_intentions
         self.hidden_dim = hidden_dim
-        self.embedding = torch.nn.Embedding(self.num_intentions,self.hidden_dim)
+        self.feat_model_name = feat_model_name
+        self.intention_embedding = torch.nn.Embedding(self.num_intentions,self.hidden_dim)
+        self.pos_embedding = pos_embedding
 
         # create feat model for each direction to reduce the ambigious 
-        self.dl_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
-        self.dm_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
-        self.dr_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
-    
+        if feat_model_name == 'onechannelfeat':
+            self.feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
+        elif feat_model_name == 'resnet18':
+            self.feat_model = Resnet18Extractor(self.hidden_dim)
+
     def forward(self,intention,dl,dm,dr):
+        l_pose = torch.tensor([0]*intention.size(0))
+        m_pose = torch.tensor([1]*intention.size(0))
+        r_pose = torch.tensor([2]*intention.size(0))
+
         # embedding intention as a key for scoring the weigths
-        intention = intention.cuda()
-        intention = self.embedding(intention)
+        intention = self.intention_embedding(intention)
         # features of 3 depth images
-        dl = dl.cuda()
-        dm = dm.cuda()
-        dr = dr.cuda()
-        dl_feat = self.dl_feat_model(dl)
-        dm_feat = self.dm_feat_model(dm)
-        dr_feat = self.dr_feat_model(dr)
+        dl_feat = self.feat_model(dl)
+        l_pose = self.pos_embedding(l_pose)
+        dl_feat = dl_feat+l_pose # camera position embedded
+
+        dm_feat = self.feat_model(dm)
+        m_pose = self.pos_embedding(m_pose)
+        dm_feat = dm_feat+m_pose # camera position embedded
+        
+        dr_feat = self.feat_model(dr)
+        r_pose = self.pos_embedding(r_pose)
+        dr_feat = dr_feat+r_pose
+
         # calculate the weight for each side
         l_score = torch.sum(intention.mul(dl_feat),dim=1,keepdim=True)
         m_score = torch.sum(intention.mul(dm_feat),dim=1,keepdim=True)
@@ -91,16 +126,19 @@ class AttentionScore(nn.Module):
         return score,dl_feat,dm_feat,dr_feat
 
 class Predictor(nn.Module):
-    def __init__(self,hidden_dim=512,num_intentions=4,num_controls=2):
+    def __init__(self,hidden_dim=512,num_intentions=4,num_controls=2,feat_model_name='resnet18',pos_embedding=None):
         super(Predictor,self).__init__()
         self.num_intentions = num_intentions
         self.num_controls = num_controls
         self.hidden_dim = hidden_dim
+        self.pos_embedding = pos_embedding
 
         # create feature extractor for each cameras
-        self.lbnw_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
-        self.mbnw_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
-        self.rbnw_feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
+        # create feat model for each direction to reduce the ambigious 
+        if feat_model_name == 'onechannelfeat':
+            self.feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
+        elif feat_model_name == 'resnet18':
+            self.feat_model = Resnet18Extractor(self.hidden_dim)
 
         self.linear1 = nn.Linear(2*hidden_dim,256,bias=False)
         self.linear1_ln = nn.LayerNorm(256)
@@ -111,14 +149,24 @@ class Predictor(nn.Module):
         self.linear4 = nn.Linear(32,self.num_controls*self.num_intentions)
     
     def forward(self,lbnw,mbnw,rbnw,score,dl_feat,dm_feat,dr_feat):
-        # compute features for each images
-        lbnw = lbnw.cuda()
-        mbnw = mbnw.cuda()
-        rbnw = rbnw.cuda()
+        # create position input
+        l_pose = torch.tensor([0]*score.size(0))
+        m_pose = torch.tensor([1]*score.size(0))
+        r_pose = torch.tensor([2]*score.size(0))
 
-        lbnw_feat = self.lbnw_feat_model(lbnw).view(-1,self.hidden_dim)
-        mbnw_feat = self.mbnw_feat_model(mbnw).view(-1,self.hidden_dim)
-        rbnw_feat = self.rbnw_feat_model(rbnw).view(-1,self.hidden_dim)
+        # computed feature for each camera regard to its position
+        lbnw_feat = self.feat_model(lbnw).view(-1,self.hidden_dim)
+        l_pose = self.pos_embedding(l_pose)
+        lbnw_feat = lbnw_feat+l_pose # camera position embedded
+
+        mbnw_feat = self.feat_model(mbnw).view(-1,self.hidden_dim)
+        m_pose = self.pos_embedding(m_pose)
+        mbnw_feat = mbnw_feat+m_pose # camera position embedded
+
+        rbnw_feat = self.feat_model(rbnw).view(-1,self.hidden_dim)
+        r_pose = self.pos_embedding(r_pose)
+        rbnw_feat = rbnw_feat+r_pose # camera position embedded
+
         # reshape depth features
         dl_feat = dl_feat.view(-1,self.hidden_dim)
         dm_feat = dm_feat.view(-1,self.hidden_dim)
@@ -147,11 +195,13 @@ class DepthIntentionEncodeModel(nn.Module):
         self.num_controls = num_controls
         self.hidden_dim = hidden_dim
 
-        self.attention_score = AttentionScore(num_intentions=self.num_intentions,hidden_dim=self.hidden_dim)
-        self.predictor = Predictor(hidden_dim=self.hidden_dim,num_intentions=self.num_intentions,num_controls=self.num_controls)
-        if torch.cuda.is_available():
-            self.attention_score.cuda()
-            self.predictor.cuda()
+        self.pos_embedding = PositionEmbedding(3,self.hidden_dim)
+        self.attention_score = AttentionScore(num_intentions=self.num_intentions,hidden_dim=self.hidden_dim,pos_embedding=self.pos_embedding)
+        self.predictor = Predictor(hidden_dim=self.hidden_dim,num_intentions=self.num_intentions,num_controls=self.num_controls,pos_embedding=self.pos_embedding)
+        # if torch.cuda.is_available():
+        #     self.pos_embedding.cuda()
+        #     self.attention_score.cuda()
+        #     self.predictor.cuda()
 
     def forward(self,intention,dl,dm,dr,lbnw,mbnw,rbnw):
         score,dl_feat,dm_feat,dr_feat = self.attention_score(intention,dl,dm,dr)
@@ -162,7 +212,8 @@ class DepthIntentionEncodeModel(nn.Module):
         masked = one_hot
         for i in range(self.num_controls-1):
             masked = np.concatenate([masked,one_hot],axis=1)
-        masked = torch.tensor(masked).cuda()
+        masked = torch.tensor(masked)
+        #masked = masked.cuda()
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
         return feat
@@ -187,7 +238,7 @@ def test():
     opt = Adam(net.parameters())
     y = torch.tensor([100,-5]).float()
     criterion = nn.MSELoss()
-    for _ in range(10000):
+    for _ in range(1):
         net.train()
         opt.zero_grad()
         loss = torch.sqrt(criterion(feat,y))
