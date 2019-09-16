@@ -87,8 +87,8 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
         outs = []
         for i in range(num_intentions):
             out = Dropout(DROPOUT)(feat)
-            out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
-            out = Dropout(DROPOUT)(out)
+            # out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+            # out = Dropout(DROPOUT)(out)
             out = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
             outs.append(out)
         outs.append(intention_input)

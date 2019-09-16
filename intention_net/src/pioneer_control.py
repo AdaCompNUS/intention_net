@@ -8,6 +8,8 @@ import fire
 import string 
 import random
 import numpy as np 
+sys.path.append('/mnt/intention_net')
+sys.path.append('.. ')
 
 # import local file
 from joy_teleop import JOY_MAPPING
@@ -21,11 +23,9 @@ from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
 
-import sys
-sys.path.append('/mnt/intention_net')
-sys.path.append('../utils')
-from undistort import undistort
-from dataset import PioneerDataset as Dataset
+from src.utils.undistort import undistort
+from src.dataset import MultiCamPioneerDataset as Dataset
+from skimage.color import rgb2gray
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
 SCREEN_SCALE = 1

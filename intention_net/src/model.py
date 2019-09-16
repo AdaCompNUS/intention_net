@@ -3,9 +3,21 @@ import torch.nn as nn
 from torch.nn import functional as F 
 import numpy as np 
 from torch.nn.modules.loss import MSELoss
+from torch.utils import model_zoo
 from torch.optim import Adam
 from tensorboardX import SummaryWriter
 from keras.utils import to_categorical
+from torchvision.models import resnet18 as ResNet
+
+class Resnet18Extractor(nn.Module):
+    def __init__(self,hidden_dim,droprate=0.2):
+        super(Resnet18Extractor,self).__init__()
+        self.hidden_dim = hidden_dim
+        resnet = ResNet(True)
+        self.model = torch.nn.Sequential(*(list(resnet.children())[:-1]))
+        
+    def forward(self,x):
+        return self.model(x)
 
 class OneChannelFeat(nn.Module):
     def __init__(self,hidden_dim=512,droprate=0.2):
