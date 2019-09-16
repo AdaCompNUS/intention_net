@@ -59,9 +59,12 @@ class AttentionScore(nn.Module):
     
     def forward(self,intention,dl,dm,dr):
         # embedding intention as a key for scoring the weigths
+        intention = intention.cuda()
         intention = self.embedding(intention)
-
         # features of 3 depth images
+        dl = dl.cuda()
+        dm = dm.cuda()
+        dr = dr.cuda()
         dl_feat = self.dl_feat_model(dl)
         dm_feat = self.dm_feat_model(dm)
         dr_feat = self.dr_feat_model(dr)
@@ -97,6 +100,10 @@ class Predictor(nn.Module):
     
     def forward(self,lbnw,mbnw,rbnw,score,dl_feat,dm_feat,dr_feat):
         # compute features for each images
+        lbnw = lbnw.cuda()
+        mbnw = mbnw.cuda()
+        rbnw = rbnw.cuda()
+
         lbnw_feat = self.lbnw_feat_model(lbnw).view(-1,self.hidden_dim)
         mbnw_feat = self.mbnw_feat_model(mbnw).view(-1,self.hidden_dim)
         rbnw_feat = self.rbnw_feat_model(rbnw).view(-1,self.hidden_dim)
@@ -130,6 +137,9 @@ class DepthIntentionEncodeModel(nn.Module):
 
         self.attention_score = AttentionScore(num_intentions=self.num_intentions,hidden_dim=self.hidden_dim)
         self.predictor = Predictor(hidden_dim=self.hidden_dim,num_intentions=self.num_intentions,num_controls=self.num_controls)
+        if torch.cuda.is_available():
+            self.attention_score.cuda()
+            self.predictor.cuda()
 
     def forward(self,intention,dl,dm,dr,lbnw,mbnw,rbnw):
         score,dl_feat,dm_feat,dr_feat = self.attention_score(intention,dl,dm,dr)
@@ -140,7 +150,7 @@ class DepthIntentionEncodeModel(nn.Module):
         masked = one_hot
         for i in range(self.num_controls-1):
             masked = np.concatenate([masked,one_hot],axis=1)
-        masked = torch.tensor(masked)
+        masked = torch.tensor(masked).cuda()
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
         return feat

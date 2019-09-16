@@ -9,3 +9,4 @@ huawei*
 runs/
 logs/
 test*/
+save_model*

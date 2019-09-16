@@ -65,12 +65,12 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
     model.to(device)
     writer = create_summary_writer(model,train_loader,log_dir)
-    criterion = nn.MSELoss()
+    criterion = nn.MSELoss().cuda()
     check_manual_seed(seed)
     #TODO: change to RAdam
     optim = Adam(model.parameters(),lr=learning_rate)
     lr_scheduler = ExponentialLR(optim,gamma=0.95)
-    checkpoints = ModelCheckpoint('models','Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
+    checkpoints = ModelCheckpoint('save_models','Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
 
     def update_fn(engine, batch):
         model.train()
@@ -80,9 +80,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
         x, y = batch
         for elem in x:
-            elem = elem.to(device)
-        for elem in y:
-            elem = elem.to(device)
+            elem = elem.cuda()
+        y = y.cuda()
 
         y_pred = model(*x)
         # if engine.state.iteration % 4:
@@ -106,9 +105,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         x,y = batch
         
         for elem in x:
-            elem = elem.to(device)
-        for elem in y:
-            elem = elem.to(device)
+            elem = elem.cuda()
+        y = y.cuda()
 
         y_pred = model(*x)
         mse_loss = F.mse_loss(y_pred,y)
@@ -128,15 +126,15 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
             print("[Epoch: {}][Iteration: {}/{}] loss: {:.4f}".format(engine.state.epoch,iter,len(train_loader),engine.state.output))
             writer.add_scalar("training/loss",engine.state.output,engine.state.iteration)
     
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def log_training_results(engine):
-        evaluator.run(train_loader)
-        metrics = evaluator.state.metrics
-        mse = metrics['mse']
-        mae = metrics['mae']
-        print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
-        writer.add_scalar("training/mse", mse, engine.state.epoch)
-        writer.add_scalar("training/mae", mae, engine.state.epoch)
+    #@trainer.on(Events.EPOCH_COMPLETED)
+    #def log_training_results(engine):
+    #    evaluator.run(train_loader)
+    #    metrics = evaluator.state.metrics
+    #    mse = metrics['mse']
+    #    mae = metrics['mae']
+    #    print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
+    #    writer.add_scalar("training/mse", mse, engine.state.epoch)
+    #    writer.add_scalar("training/mae", mae, engine.state.epoch)
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def update_lr_scheduler(engine):
