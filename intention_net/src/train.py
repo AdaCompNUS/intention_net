@@ -15,7 +15,7 @@ from torch.nn import functional as F
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from ignite.engine import Engine, Events
 from ignite.handlers import ModelCheckpoint,Timer
-from ignite.metrics import Loss
+from ignite.metrics import Loss,RunningAverage
 
 from tensorboardX import SummaryWriter
 
@@ -81,8 +81,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
             optim.zero_grad()
 
         x, y = batch
-        for elem in x:
-            elem = elem.to(device)
+        x = list(map(lambda x: x.to(device),x))
         y = y.to(device)
 
         y_pred = model(*x)
@@ -106,8 +105,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
         x,y = batch
         
-        for elem in x:
-            elem = elem.to(device)
+        x = list(map(lambda x: x.to(device),x))
         y = y.to(device)
 
         y_pred = model(*x)
@@ -119,7 +117,13 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
     trainer = Engine(update_fn)
     trainer.add_event_handler(Events.EPOCH_COMPLETED,checkpoints,{'model':model})
+    avg_loss = RunningAverage(output_transform=lambda x: x,alpha=0.1)
+    avg_loss.attach(trainer, 'running_avg_loss')
+    pbar = ProgressBar()
+    pbar.attach(trainer)
+
     evaluator = Engine(evaluate_fn)
+    pbar.attach(evaluator)
     
     @trainer.on(Events.ITERATION_COMPLETED)
     def log_training_loss(engine):
@@ -128,15 +132,15 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
             print("[Epoch: {}][Iteration: {}/{}] loss: {:.4f}".format(engine.state.epoch,iter,len(train_loader),engine.state.output))
             writer.add_scalar("training/loss",engine.state.output,engine.state.iteration)
     
-    #@trainer.on(Events.EPOCH_COMPLETED)
-    #def log_training_results(engine):
-    #    evaluator.run(train_loader)
-    #    metrics = evaluator.state.metrics
-    #    mse = metrics['mse']
-    #    mae = metrics['mae']
-    #    print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
-    #    writer.add_scalar("training/mse", mse, engine.state.epoch)
-    #    writer.add_scalar("training/mae", mae, engine.state.epoch)
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def log_training_results(engine):
+        evaluator.run(train_loader)
+        metrics = evaluator.state.metrics
+        mse = metrics['mse']
+        mae = metrics['mae']
+        print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
+        writer.add_scalar("training/mse", mse, engine.state.epoch)
+        writer.add_scalar("training/mae", mae, engine.state.epoch)
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def update_lr_scheduler(engine):

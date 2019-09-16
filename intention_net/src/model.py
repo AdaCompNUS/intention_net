@@ -217,7 +217,7 @@ class DepthIntentionEncodeModel(nn.Module):
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
         return feat
-
+        
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
