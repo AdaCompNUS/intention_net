@@ -51,7 +51,7 @@ CHUNK_SIZE = 1
 
 def imgmsg_to_cv2(msg,undistort_param):
     im = CvBridge().compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
-    if undistort_param is not None:
+    if undistort_param:
         im = undistort(im,undistort_param)
     return cv2.resize(im, (224, 224))
 

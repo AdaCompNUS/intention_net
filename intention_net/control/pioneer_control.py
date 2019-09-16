@@ -232,7 +232,11 @@ class Controller(object):
             print('toggle training mode to: %s'%(not self.training))
             if not self.training:
                 self.trajectory_index = self._random_string(15)
-         #STRAIGHT_FORWARD
+        if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
+            self.key = 's'
+            print('stop')
+
+        #STRAIGHT_FORWARD
         if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
             self.manual_intention =  'forward'
             print('Intention is manually set to: forward')
@@ -260,6 +264,12 @@ class Controller(object):
         if self.key == 't':
             self.training = not self.training
             self.key = ''
+        if self.key == 's':
+            self._enable_auto_control = False
+            self.training = False
+            self.tele_twist.linear.x = 0
+            self.tele_twist.angular.z = 0
+
         if self._enable_auto_control:
             if not self.intention:
                     print('estimate pose + goal....')

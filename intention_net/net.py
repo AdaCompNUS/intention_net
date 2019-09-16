@@ -16,7 +16,7 @@ from keras import backend as K
 
 INIT='he_normal'
 L2=1e-5
-DROPOUT=0.5
+DROPOUT=0.3
 
 def filter_control(args):
     outs, intention = args[:-1], args[-1]
@@ -66,7 +66,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
 
         rgbl_feat = Dropout(DROPOUT)(rgbl_feat)
         rgbl_feat = Dense(512,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbl_feat)
- 
+
         rgbm_feat = Dropout(DROPOUT)(rgbm_feat)
         rgbm_feat = Dense(1024,kernel_initializer=INIT,kernel_regularizer=l2(L2),activation='relu')(rgbm_feat)
         
@@ -87,8 +87,8 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
         outs = []
         for i in range(num_intentions):
             out = Dropout(DROPOUT)(feat)
-            out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
-            out = Dropout(DROPOUT)(out)
+            # out = Dense(1024, kernel_initializer=INIT, kernel_regularizer=l2(L2), activation='relu')(out)
+            # out = Dropout(DROPOUT)(out)
             out = Dense(num_control, kernel_initializer=INIT, kernel_regularizer=l2(L2))(out)
             outs.append(out)
         outs.append(intention_input)
@@ -123,7 +123,7 @@ def IntentionNet(mode, input_frame, num_control, num_intentions=-1,use_side_mode
             model = Model(inputs=[rgbl_input, rgbm_input, rgbr_input, lpe_input, speed_input], outputs=control)
 
     return model
-    
+
 def test():
     from keras.preprocessing.image import load_img, img_to_array
     from keras.applications.resnet50 import preprocess_input
