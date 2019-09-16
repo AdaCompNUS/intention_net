@@ -23,7 +23,7 @@ flags.DEFINE_string(
     help=help_wrap("The location of the validation data."))
 
 flags.DEFINE_string(
-    name="model_dir", short_name="md", default="/home/duong/Downloads/data_correct_intention",
+    name="model_dir", short_name="md", default="/home/duong/Downloads/data_correct_intention/new_model",
     help=help_wrap("The location of the model checkpoint data."))
 
 flags.DEFINE_string(
@@ -37,7 +37,7 @@ flags.DEFINE_boolean(
     help=help_wrap("Whether to directly evaluted the learned model"))
 
 flags.DEFINE_string(
-    name='resume', short_name='r', default='/home/duong/Downloads/data_correct_intention/NORMAL_DLM_latest_model.h5',
+    name='resume', short_name='r', default='/home/duong/Downloads/train_data/NORMAL_DLM_latest_model.h5',
     help=help_wrap("Path to latest checkpoint for resume."))
 
 flags.DEFINE_string(
@@ -60,7 +60,7 @@ flags.DEFINE_integer(
     name="epochs_between_evals", short_name="ebe", default=10,
     help=help_wrap("The number of training epochs to run between evaluations"))
 
-flags.DEFINE_float('learning_rate', short_name="lr", default=5e-5,
+flags.DEFINE_float('learning_rate', short_name="lr", default=1e-4,
     help=help_wrap('Initial learning rate.'))
 
 flags.DEFINE_integer(

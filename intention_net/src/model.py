@@ -99,6 +99,10 @@ class AttentionScore(nn.Module):
         l_pose = torch.tensor([0]*intention.size(0))
         m_pose = torch.tensor([1]*intention.size(0))
         r_pose = torch.tensor([2]*intention.size(0))
+        if intention.is_cuda:
+            l_pose = l_pose.cuda()
+            m_pose = m_pose.cuda()
+            r_pose = r_pose.cuda()
 
         # embedding intention as a key for scoring the weigths
         intention = self.intention_embedding(intention)
@@ -153,6 +157,10 @@ class Predictor(nn.Module):
         l_pose = torch.tensor([0]*score.size(0))
         m_pose = torch.tensor([1]*score.size(0))
         r_pose = torch.tensor([2]*score.size(0))
+        if lbnw.is_cuda:
+            l_pose = l_pose.cuda()
+            m_pose = m_pose.cuda()
+            r_pose = r_pose.cuda()
 
         # computed feature for each camera regard to its position
         lbnw_feat = self.feat_model(lbnw).view(-1,self.hidden_dim)
@@ -198,10 +206,11 @@ class DepthIntentionEncodeModel(nn.Module):
         self.pos_embedding = PositionEmbedding(3,self.hidden_dim)
         self.attention_score = AttentionScore(num_intentions=self.num_intentions,hidden_dim=self.hidden_dim,pos_embedding=self.pos_embedding)
         self.predictor = Predictor(hidden_dim=self.hidden_dim,num_intentions=self.num_intentions,num_controls=self.num_controls,pos_embedding=self.pos_embedding)
-        # if torch.cuda.is_available():
-        #     self.pos_embedding.cuda()
-        #     self.attention_score.cuda()
-        #     self.predictor.cuda()
+        
+        if torch.cuda.is_available():
+            self.pos_embedding.cuda()
+            self.attention_score.cuda()
+            self.predictor.cuda()
 
     def forward(self,intention,dl,dm,dr,lbnw,mbnw,rbnw):
         score,dl_feat,dm_feat,dr_feat = self.attention_score(intention,dl,dm,dr)
@@ -213,11 +222,12 @@ class DepthIntentionEncodeModel(nn.Module):
         for i in range(self.num_controls-1):
             masked = np.concatenate([masked,one_hot],axis=1)
         masked = torch.tensor(masked)
-        #masked = masked.cuda()
+        if intention.is_cuda:
+            masked = masked.cuda()
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
         return feat
-        
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
