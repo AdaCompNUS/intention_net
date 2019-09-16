@@ -89,7 +89,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         #     print('target',y)
         #     print('pred',y_pred)
         #     print(x[0])
-        loss = torch.sqrt(criterion(y_pred, y)) / accumulation_steps
+        loss = criterion(y_pred, y) / accumulation_steps
         loss.backward()
 
         #engine.state.cummulative_loss += loss
@@ -120,7 +120,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     avg_loss = RunningAverage(output_transform=lambda x: x,alpha=0.1)
     avg_loss.attach(trainer, 'running_avg_loss')
     pbar = ProgressBar()
-    pbar.attach(trainer)
+    pbar.attach(trainer,['running_avg_loss'])
 
     evaluator = Engine(evaluate_fn)
     pbar.attach(evaluator)
