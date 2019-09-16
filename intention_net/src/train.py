@@ -22,6 +22,8 @@ from tensorboardX import SummaryWriter
 from src.model import DepthIntentionEncodeModel
 from src.dataset import MultiCamPioneerDataset
 
+from utils.radam import RAdam
+
 def check_manual_seed(seed):
     """ If manual seed is not specified, choose a random one and communicate it to the user.
     """
@@ -59,18 +61,18 @@ def create_summary_writer(model,data_loader,log_dir):
         print('Failed to save graph: {}'.format(e))
     return writer
 
-def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4):
+def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_model='models'):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_loader,val_loader = get_dataloader(train_dir,val_dir,num_workers=num_workers,batch_size=batch_size,shuffle=shuffle)
     model = DepthIntentionEncodeModel(num_controls=num_controls,num_intentions=num_intentions,hidden_dim=hidden_dim)
-    model.to(device)
+    model = model.to(device)
     writer = create_summary_writer(model,train_loader,log_dir)
-    criterion = nn.MSELoss().cuda()
+    criterion = nn.MSELoss()
     check_manual_seed(seed)
     #TODO: change to RAdam
-    optim = Adam(model.parameters(),lr=learning_rate)
+    optim = RAdam(model.parameters(),lr=learning_rate,betas=(0.9,0.999))
     lr_scheduler = ExponentialLR(optim,gamma=0.95)
-    checkpoints = ModelCheckpoint('save_models','Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
+    checkpoints = ModelCheckpoint(save_model,'Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
 
     def update_fn(engine, batch):
         model.train()
@@ -80,8 +82,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
         x, y = batch
         for elem in x:
-            elem = elem.cuda()
-        y = y.cuda()
+            elem = elem.to(device)
+        y = y.to(device)
 
         y_pred = model(*x)
         # if engine.state.iteration % 4:
@@ -105,8 +107,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         x,y = batch
         
         for elem in x:
-            elem = elem.cuda()
-        y = y.cuda()
+            elem = elem.to(device)
+        y = y.to(device)
 
         y_pred = model(*x)
         mse_loss = F.mse_loss(y_pred,y)
@@ -164,6 +166,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_intentions',type=int,default=4,help="number of intentions")
     parser.add_argument('--num_controls',type=int,default=2,help="number of controls")
     parser.add_argument('--hidden_dim',type=int,default=256,help="hidden size of image embedded")
+    parser.add_argument('--save_model',type=str,default='models',help='directory to save checkpoint')
     parser.add_argument('--accumulation_steps',type=int,default=1,help="number of accumulation steps for gradient update")
     args = parser.parse_args()
 
@@ -171,4 +174,4 @@ if __name__ == "__main__":
         num_epochs=args.num_epochs,batch_size=args.batch_size,
         shuffle=args.shuffle,num_controls=args.num_controls,num_intentions=args.num_intentions,
         hidden_dim=args.hidden_dim,log_interval=args.log_interval,log_dir=args.log_dir,seed=2605,
-        accumulation_steps=args.accumulation_steps)
+        accumulation_steps=args.accumulation_steps,save_model=args.save_model)
