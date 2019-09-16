@@ -122,7 +122,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     trainer.add_event_handler(Events.EPOCH_COMPLETED,checkpoints,{'model':model})
     avg_loss = RunningAverage(output_transform=lambda x: x,alpha=0.1)
     avg_loss.attach(trainer, 'running_avg_loss')
-    pbar = ProgressBar(bar_format='{desc}[{n_fmt}/{total_fmt}] {percentage:3.0f}%|{bar}{postfix} [{elapsed}<{remaining}]')
+    pbar = ProgressBar()
     pbar.attach(trainer,['running_avg_loss'])
 
     evaluator = Engine(evaluate_fn)
