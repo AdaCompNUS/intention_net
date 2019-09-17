@@ -88,6 +88,12 @@ class AttentionScore(nn.Module):
         self.feat_model_name = feat_model_name
         self.intention_embedding = torch.nn.Embedding(self.num_intentions,self.hidden_dim)
         self.pos_embedding = pos_embedding
+        self.linear1 = nn.Linear(self.hidden_dim,self.hidden_dim)
+        self.linear1_ln = nn.LayerNorm(self.hidden_dim)
+        self.linear2 = nn.Linear(self.hidden_dim,self.hidden_dim)
+        self.linear2_ln = nn.LayerNorm(self.hidden_dim)
+        self.transform = torch.nn.Sequential(self.linear1,nn.ReLU(True),self.linear1_ln,\
+                                            self.linear2,nn.ReLU(True),self.linear2_ln)
 
         # create feat model for each direction to reduce the ambigious 
         if feat_model_name == 'onechannelfeat':
@@ -110,19 +116,23 @@ class AttentionScore(nn.Module):
         dl_feat = self.feat_model(dl)
         l_pose = self.pos_embedding(l_pose)
         dl_feat = dl_feat+l_pose # camera position embedded
+        dl_feat = self.transform(dl_feat)
 
         dm_feat = self.feat_model(dm)
         m_pose = self.pos_embedding(m_pose)
         dm_feat = dm_feat+m_pose # camera position embedded
-        
+        dm_feat = self.transform(dm_feat)
+
         dr_feat = self.feat_model(dr)
         r_pose = self.pos_embedding(r_pose)
-        dr_feat = dr_feat+r_pose
-
+        dr_feat = dr_feat+r_pose # camera position embedded
+        dr_feat = self.transform(dr_feat)
+        
         # calculate the weight for each side
-        l_score = torch.sum(intention.mul(dl_feat),dim=1,keepdim=True)
-        m_score = torch.sum(intention.mul(dm_feat),dim=1,keepdim=True)
-        r_score = torch.sum(intention.mul(dr_feat),dim=1,keepdim=True)
+        l_score = torch.sum(intention.mul(dl_feat),dim=1,keepdim=True)/torch.tensor(self.hidden_dim) #normalize attention score
+        m_score = torch.sum(intention.mul(dm_feat),dim=1,keepdim=True)/torch.tensor(self.hidden_dim) #normalize attention score
+        r_score = torch.sum(intention.mul(dr_feat),dim=1,keepdim=True)/torch.tensor(self.hidden_dim) #normalize attention score
+        
         # concat & normalize
         feat = torch.cat((l_score,m_score,r_score),dim=1)
         score = F.softmax(feat,dim=-1)
@@ -143,7 +153,12 @@ class Predictor(nn.Module):
             self.feat_model = OneChannelFeat(hidden_dim=self.hidden_dim)
         elif feat_model_name == 'resnet18':
             self.feat_model = Resnet18Extractor(self.hidden_dim)
-
+        
+        # transform after concat with position embedding
+        self.transform = nn.Sequential(nn.Linear(self.hidden_dim,self.hidden_dim),nn.ReLU(True),nn.LayerNorm(self.hidden_dim),\
+                                        nn.Linear(self.hidden_dim,self.hidden_dim),nn.ReLU(True),nn.LayerNorm(self.hidden_dim))
+        
+        # predict the velocity
         self.linear1 = nn.Linear(2*hidden_dim,256,bias=False)
         self.linear1_ln = nn.LayerNorm(256)
         self.linear2 = nn.Linear(256,64,bias=False)
@@ -166,19 +181,23 @@ class Predictor(nn.Module):
         lbnw_feat = self.feat_model(lbnw).view(-1,self.hidden_dim)
         l_pose = self.pos_embedding(l_pose)
         lbnw_feat = lbnw_feat+l_pose # camera position embedded
+        lbnw_feat = self.transform(lbnw_feat)
 
         mbnw_feat = self.feat_model(mbnw).view(-1,self.hidden_dim)
         m_pose = self.pos_embedding(m_pose)
         mbnw_feat = mbnw_feat+m_pose # camera position embedded
+        mbnw_feat = self.transform(mbnw_feat)
 
         rbnw_feat = self.feat_model(rbnw).view(-1,self.hidden_dim)
         r_pose = self.pos_embedding(r_pose)
         rbnw_feat = rbnw_feat+r_pose # camera position embedded
+        rbnw_feat = self.transform(rbnw_feat)
 
         # reshape depth features
         dl_feat = dl_feat.view(-1,self.hidden_dim)
         dm_feat = dm_feat.view(-1,self.hidden_dim)
         dr_feat = dr_feat.view(-1,self.hidden_dim)
+
         # cat the features of both depth and grayscale camera each direction
         l_feat = torch.cat((lbnw_feat,dl_feat),dim=1).unsqueeze(1)
         m_feat = torch.cat((mbnw_feat,dm_feat),dim=1).unsqueeze(1)
@@ -193,7 +212,6 @@ class Predictor(nn.Module):
         feat = self.linear2_ln(F.leaky_relu(self.linear2(feat)))
         feat = self.linear3_ln(F.leaky_relu(self.linear3(feat)))
         feat = self.linear4(feat) # intention_0: velocity,angle = feat[0],feat[1]; intention_1: velocity,angle = feat[2],feat[3]
-
         return feat
 
 class DepthIntentionEncodeModel(nn.Module):
@@ -226,6 +244,7 @@ class DepthIntentionEncodeModel(nn.Module):
             masked = masked.cuda()
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
+        print(feat)
         return feat
 
 def count_parameters(model):
@@ -248,7 +267,7 @@ def test():
     opt = Adam(net.parameters())
     y = torch.tensor([100,-5]).float()
     criterion = nn.MSELoss()
-    for _ in range(1):
+    for _ in range(50):
         net.train()
         opt.zero_grad()
         loss = torch.sqrt(criterion(feat,y))

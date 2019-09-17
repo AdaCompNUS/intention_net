@@ -75,7 +75,9 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     criterion = nn.MSELoss()
     check_manual_seed(seed)
 
-    optim = RAdam(model.parameters(),lr=learning_rate,betas=(0.9,0.999))
+    # optim = RAdam(model.parameters(),lr=learning_rate,betas=(0.9,0.999))
+    optim = SGD(model.parameters(),lr=learning_rate)
+
     lr_scheduler = ExponentialLR(optim,gamma=0.95)
     checkpoints = ModelCheckpoint(save_model,'Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
 
@@ -159,12 +161,12 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=128,
-                        help='input batch size for training (default: 16)')
-    parser.add_argument('--val_batch_size', type=int, default=16,
-                        help='input batch size for validation (default: 1000)')
-    parser.add_argument('--num_epochs', type=int, default=1000,
-                        help='number of epochs to train (default: 10)')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='input batch size for training (default: 32)')
+    parser.add_argument('--val_batch_size', type=int, default=32,
+                        help='input batch size for validation (default: 100)')
+    parser.add_argument('--num_epochs', type=int, default=100,
+                        help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=0.0005,
                         help='learning rate (default: 0.001)')
     parser.add_argument('--log_interval', type=int, default=2,
