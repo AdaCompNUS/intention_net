@@ -72,7 +72,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
     writer = create_summary_writer(model,train_loader,log_dir)
     criterion = nn.MSELoss()
     check_manual_seed(seed)
-    #TODO: change to RAdam
+
     optim = RAdam(model.parameters(),lr=learning_rate,betas=(0.9,0.999))
     lr_scheduler = ExponentialLR(optim,gamma=0.95)
     checkpoints = ModelCheckpoint(save_model,'Model',save_interval=1,n_saved=3,create_dir=True,require_empty=False,save_as_state_dict=False)
@@ -134,6 +134,8 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         if iter % log_interval == 0:
             print("[Epoch: {}][Iteration: {}/{}] loss: {:.4f}".format(engine.state.epoch,iter,len(train_loader),engine.state.output))
             writer.add_scalar("training/loss",engine.state.output,engine.state.iteration)
+            for name, param in model.named_parameters():
+                writer.add_histogram(name, param.clone().cpu().data.numpy(), iter)
     
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
@@ -144,6 +146,16 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
         writer.add_scalar("training/mse", mse, engine.state.epoch)
         writer.add_scalar("training/mae", mae, engine.state.epoch)
+
+    # @trainer.on(Events.EPOCH_COMPLETED)
+    # def log_validation_results(engine):
+    #     evaluator.run(val_loader)
+    #     metrics = evaluator.state.metrics
+    #     mse = metrics['mse']
+    #     mae = metrics['mae']
+    #     print("Validation Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
+    #     writer.add_scalar("valid/mse", mse, engine.state.epoch)
+    #     writer.add_scalar("valid/mae", mae, engine.state.epoch)
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def update_lr_scheduler(engine):
@@ -161,7 +173,7 @@ if __name__ == "__main__":
                         help='input batch size for validation (default: 1000)')
     parser.add_argument('--num_epochs', type=int, default=1000,
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.0005,
                         help='learning rate (default: 0.001)')
     parser.add_argument('--log_interval', type=int, default=2,
                         help='how many batches to wait before logging training status')
