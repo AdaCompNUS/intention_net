@@ -244,7 +244,6 @@ class DepthIntentionEncodeModel(nn.Module):
             masked = masked.cuda()
         masked = masked.view(-1,self.num_controls,self.num_intentions)
         feat = torch.sum(feat.mul(masked),dim=-1)
-        print(feat)
         return feat
 
 def count_parameters(model):
