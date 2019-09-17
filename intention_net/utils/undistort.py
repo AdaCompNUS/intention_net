@@ -25,7 +25,7 @@ LEFT_CAMERA_INFO = {
     'P': [367.1950001882657, 0.0, 367.7484130859375, -44131.81047519387, 0.0, 367.1950001882657, 251.78948974609375, 0.0, 0.0, 0.0, 1.0, 0.0]   
 }
 
-def undistort(img,param=LEFT_CAMERA_INFO):
+def undistort(img,param=FRONT_CAMERA_INFO):
     # K - Intrinsic camera matrix for the raw (distorted) images.
     camera_matrix =  param['K']
     camera_matrix = np.reshape(camera_matrix, (3, 3))
