@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from torch import nn
 from torchvision import transforms
 from torch.nn import functional as F
+from torch.backends import cudnn
 
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from ignite.engine import Engine, Events
@@ -63,6 +64,7 @@ def create_summary_writer(model,data_loader,log_dir):
 
 def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,batch_size=16,shuffle=False,num_controls=2,num_intentions=4,hidden_dim=256,log_interval=10,log_dir='./logs',seed=2605,accumulation_steps=4,save_model='models',resume=None):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    cudnn.benchmark = True
     train_loader,val_loader = get_dataloader(train_dir,val_dir,num_workers=num_workers,batch_size=batch_size,shuffle=shuffle)
     if resume:
         model = torch.load(resume)
@@ -79,26 +81,24 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
     def update_fn(engine, batch):
         model.train()
-        if (engine.state.iteration-1) % accumulation_steps == 0:
-            #engine.state.cummulative_loss = 0.0
-            optim.zero_grad()
+        #engine.state.cummulative_loss = 0.0
+        optim.zero_grad()
 
         x, y = batch
         x = list(map(lambda x: x.to(device),x))
         y = y.to(device)
 
         y_pred = model(*x)
-        # if engine.state.iteration % 4:
-        #     print('target',y)
-        #     print('pred',y_pred)
-        #     print(x[0])
-        loss = criterion(y_pred, y) / accumulation_steps
+       
+        #if engine.state.epoch  % 10:
+        #    print('target',y)
+        #    print('pred',y_pred)
+        
+        loss = criterion(y_pred, y) 
         loss.backward()
 
         #engine.state.cummulative_loss += loss
-
-        if (engine.state.iteration-1) % accumulation_steps == 0:
-            optim.step()
+        optim.step()
 
         return loss.item()
     
@@ -143,7 +143,7 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
         metrics = evaluator.state.metrics
         mse = metrics['mse']
         mae = metrics['mae']
-        print("Training Results - Epoch: {}  mae: {:.2f} mse: {:.2f}".format(engine.state.epoch, mse, mae))
+        print("Training Results - Epoch: {}  mae: {:.5f} mse: {:.5f}".format(engine.state.epoch, mse, mae))
         writer.add_scalar("training/mse", mse, engine.state.epoch)
         writer.add_scalar("training/mae", mae, engine.state.epoch)
 

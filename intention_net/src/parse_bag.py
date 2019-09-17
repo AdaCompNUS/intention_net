@@ -29,7 +29,7 @@ from utils.undistort import undistort,FRONT_CAMERA_INFO,LEFT_CAMERA_INFO,RIGHT_C
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['/train/mynteye/left_img/compressed',\
+    'RGBS' : ['/train/mynteye/right_img/compressed',\
         '/train/mynteye_2/left_img/compressed',\
         '/train/mynteye_3/right_img/compressed'],
     'DEPTHS' : ['/train/mynteye/depth_img/compressed','/train/mynteye_2/depth_img/compressed','/train/mynteye_3/depth_img/compressed'],

@@ -29,7 +29,7 @@ class MultiCamPioneerDataset(Dataset):
         'stop':3,
     }
 
-    def __init__(self,data_dir,target_size=(224,224),transform=None,BASE_DIR='',LEFT_GRAYSCALE_DIR='rgb_4',RIGHT_GRAYSCALE_DIR='rgb_7',FRONT_GRAYSCALE_DIR='rgb_0',LEFT_DEPTH_DIR='depth_2',RIGHT_DEPTH_DIR='depth_3',FRONT_DEPTH_DIR='depth_0'):
+    def __init__(self,data_dir,target_size=(224,224),transform=None,BASE_DIR='',LEFT_GRAYSCALE_DIR='rgb_2',RIGHT_GRAYSCALE_DIR='rgb_1',FRONT_GRAYSCALE_DIR='rgb_0',LEFT_DEPTH_DIR='depth_2',RIGHT_DEPTH_DIR='depth_1',FRONT_DEPTH_DIR='depth_0'):
         super(MultiCamPioneerDataset,self).__init__()
         self.data_dir = data_dir
         self.target_size = target_size
