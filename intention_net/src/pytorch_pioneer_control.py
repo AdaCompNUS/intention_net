@@ -233,7 +233,7 @@ class Controller(object):
         if data.buttons[JOY_MAPPING['buttons']['mode']] == 1:
             self.key = 'i'
             print('toggle intention mode to: %s'%(not self.is_manual_intention))
-         #STRAIGHT_FORWARD
+        #STRAIGHT_FORWARD
         if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
             self.manual_intention =  'forward'
             print('Intention is manually set to: forward')

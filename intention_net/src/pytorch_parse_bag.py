@@ -114,6 +114,9 @@ def main_wrapper(data_dir='/data', sensor='mynt_eye', intention_type='dlm'):
     if os.path.exists(osp.join(data_dir, gendir)) and os.path.isdir(osp.join(data_dir, gendir)):
         shutil.rmtree(osp.join(data_dir, gendir))
     os.mkdir(osp.join(data_dir, gendir))
+    with open(osp.join(data_dir, gendir,'README.txt'),'w+') as f:
+        f.write('THIS DATA IS PARSED TO SERVE PYTORCH MODEL')
+
     topic_save_path = []
     for idx, rgb_topic in enumerate(RGBS):
         fn = osp.join(data_dir, gendir, f'rgb_{idx}')
