@@ -8,8 +8,6 @@ import fire
 import string 
 import random
 import numpy as np 
-sys.path.append('/mnt/intention_net')
-sys.path.append('.. ')
 
 # import local file
 from joy_teleop import JOY_MAPPING
@@ -23,9 +21,11 @@ from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
 
-from src.utils.undistort import undistort
-from src.dataset import MultiCamPioneerDataset as Dataset
-from skimage.color import rgb2gray
+import sys
+sys.path.append('/mnt/intention_net')
+sys.path.append('../utils')
+from undistort import undistort,FRONT_CAMERA_INFO
+from dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
 SCREEN_SCALE = 1
@@ -90,7 +90,6 @@ class Controller(object):
         self.training = False
         self.scan = None
         self.manual_intention = 'forward'
-        self.is_manual_intention = False
 
         # subscribe ros messages
         rospy.Subscriber('/mynteye/left/image_raw/compressed', CompressedImage, self.cb_left_img, queue_size=1, buff_size=2**10)
@@ -112,6 +111,7 @@ class Controller(object):
         rospy.Subscriber('/imu3', Imu, self.cb_imu3, queue_size=1, buff_size=2**10)
 
         if mode == 'DLM':
+            # rospy.Subscriber('/intention_dlm', Int32, self.cb_dlm_intention, queue_size=1)
             rospy.Subscriber('/test_intention', String, self.cb_dlm_intention, queue_size=1)
         else:
             rospy.Subscriber('/intention_lpe', Image, self.cb_lpe_intention, queue_size=1, buff_size=2**10)
@@ -230,10 +230,13 @@ class Controller(object):
         if data.buttons[JOY_MAPPING['buttons']['start']] == 1:
             self.key = 't'
             print('toggle training mode to: %s'%(not self.training))
-        if data.buttons[JOY_MAPPING['buttons']['mode']] == 1:
-            self.key = 'i'
-            print('toggle intention mode to: %s'%(not self.is_manual_intention))
-         #STRAIGHT_FORWARD
+            if not self.training:
+                self.trajectory_index = self._random_string(15)
+        if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
+            self.key = 's'
+            print('stop')
+
+        #STRAIGHT_FORWARD
         if data.buttons[JOY_MAPPING['buttons']['X']] == 1: 
             self.manual_intention =  'forward'
             print('Intention is manually set to: forward')
@@ -261,9 +264,13 @@ class Controller(object):
         if self.key == 't':
             self.training = not self.training
             self.key = ''
-        if self.key == 'i':
-            self.is_manual_intention = not self.is_manual_intention
+        if self.key == 's':
+            self._enable_auto_control = False
             self.key = ''
+            self.training = False
+            self.tele_twist.linear.x = 0
+            self.tele_twist.angular.z = 0
+
         if self._enable_auto_control:
             if not self.intention:
                     print('estimate pose + goal....')
@@ -271,17 +278,30 @@ class Controller(object):
                 self.tele_twist.linear.x = 0
                 self.tele_twist.angular.z = 0
             else:
-                if self.is_manual_intention:
-                    intention = self.manual_intention
-                else:
+                if self._mode == 'DLM':
                     intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
-                print('intention: ',intention)
-                # convert ros msg -> cv2
-                img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8')),(224,224))
+                    print('intention: ',intention)
+                if policy.input_frame == 'NORMAL': # 1 cam
+                    # convert ros msg -> cv2
+                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(224,224))
                     
-                pred_control = policy.predict_control(img, intention, self.speed)[0]
-                self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
-                self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
+                    pred_control = policy.predict_control(img, intention, self.speed)[0]
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                elif policy.input_frame == 'MULTI':
+                    # convert ros msg -> cv2 
+                    # NOTE: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
+                    left_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me3_left,desired_encoding='bgr8'),(224,224))
+                    front_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),(224,224))
+                    right_img = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),(224,224))
+
+                    # stack left,right -> 3channel
+                    left_img = np.stack((left_img,)*3,axis=-1)
+                    right_img = np.stack((right_img,)*3,axis=-1)
+
+                    pred_control= policy.predict_control([left_img,front_img,right_img],intention,self.speed)[0]
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.7
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.7
         
         # publish to /train/* topic to record data (if in training mode)
         if self.training:
@@ -316,7 +336,79 @@ class Controller(object):
             self.pub_odom.publish(self.odom)
             self.pub_scan.publish(self.scan)
 
+    def text_to_screen(self, text, color = (200, 000, 000), pos=(WINDOW_WIDTH/2, 30), size=30):
+        text = str(text)
+        font = pygame.font.SysFont('Comic Sans MS', size*SCREEN_SCALE)#pygame.font.Font(font_type, size)
+        text = font.render(text, True, color)
+        text_rect = text.get_rect(center=(pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE))
+        self._display.blit(text, text_rect)
+
+    def get_vertical_rect(self, value, pos):
+        pos = (pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE)
+        scale = 20*SCREEN_SCALE
+        if value > 0:
+            return pygame.Rect((pos[0], pos[1]-value*scale), (scale, value*scale))
+        else:
+            return pygame.Rect(pos, (scale, -value*scale))
+
+    def get_horizontal_rect(self, value, pos):
+        pos = (pos[0]*SCREEN_SCALE, pos[1]*SCREEN_SCALE)
+        scale = 20*SCREEN_SCALE
+        if value > 0:
+            return pygame.Rect((pos[0]-value*scale, pos[1]), (value*scale, scale))
+        else:
+            return pygame.Rect(pos, (-value*scale, scale))
+
+    def control_bar(self, pos=(WINDOW_WIDTH-100, WINDOW_HEIGHT-150)):
+        acc_rect = self.get_vertical_rect(self.tele_twist.linear.x, pos)
+        pygame.draw.rect(self._display, (0, 255, 0), acc_rect)
+        steer_rect = self.get_horizontal_rect(self.tele_twist.angular.z, (pos[0], pos[1]+110))
+        pygame.draw.rect(self._display, (0, 255, 0), steer_rect)
+        if self.labeled_control is not None:
+            pygame.draw.rect(self._display, (255, 0, 0), self.get_vertical_rect(self.labeled_control.linear.x, (pos[0]-20, pos[1])))
+            pygame.draw.rect(self._display, (255, 0, 0), self.get_horizontal_rect(self.labeled_control.angular.z, (pos[0], pos[1]+130)))
+
+    def _on_render(self):
+        """
+        render loop
+        """
+        if self.image is not None:
+            array = cv2.resize(self.image, (WINDOW_WIDTH*SCREEN_SCALE, WINDOW_HEIGHT*SCREEN_SCALE))
+            surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+            self._display.blit(surface, (0, 0))
+        if self.speed is not None:
+            self.text_to_screen('Speed: {:.4f} m/s'.format(self.speed), pos=(150, WINDOW_HEIGHT-30))
+        if self.intention is not None:
+            if self._mode == 'DLM':
+                self.text_to_screen(Dataset.INTENTION_MAPPING_NAME[self.intention])
+            else:
+                surface = pygame.surfarray.make_surface(self.intention.swapaxes(0, 1))
+                self._display.blit(surface, (SCREEN_SCALE*(WINDOW_WIDTH-self.intention.shape[0])/2, 0))
+
+        self.control_bar()
+        self.text_to_screen("Auto: {}".format(self._enable_auto_control), pos=(150, WINDOW_HEIGHT-70))
+
+        pygame.display.flip()
+
+    def _initialize_game(self):
+        self._display = pygame.display.set_mode(
+                (WINDOW_WIDTH*SCREEN_SCALE, WINDOW_HEIGHT*SCREEN_SCALE),
+                pygame.HWSURFACE | pygame.DOUBLEBUF)
+
     def execute(self, policy):
+        # pygame.init()
+        # self._initialize_game()
+        # try:
+        #     while True:
+        #         for event in pygame.event.get():
+        #             if event.type == pygame.QUIT:
+        #                 sys.exit(-1)
+
+        #         self._on_loop(policy)
+        #         self._on_render()
+        #         self._rate.sleep()
+        # finally:
+        #     pygame.quit()
         while True:
             self._on_loop(policy)
             self._rate.sleep()

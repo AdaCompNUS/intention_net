@@ -24,7 +24,7 @@ from cv_bridge import CvBridge
 import sys
 sys.path.append('/mnt/intention_net')
 sys.path.append('../utils')
-from undistort import undistort
+from undistort import undistort,FRONT_CAMERA_INFO
 from dataset import PioneerDataset as Dataset
 
 # SCREEN SCALE IS FOR high dpi screen, i.e. 4K screen
@@ -266,6 +266,7 @@ class Controller(object):
             self.key = ''
         if self.key == 's':
             self._enable_auto_control = False
+            self.key = ''
             self.training = False
             self.tele_twist.linear.x = 0
             self.tele_twist.angular.z = 0
@@ -282,11 +283,11 @@ class Controller(object):
                     print('intention: ',intention)
                 if policy.input_frame == 'NORMAL': # 1 cam
                     # convert ros msg -> cv2
-                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8')),(224,224))
+                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(224,224))
                     
                     pred_control = policy.predict_control(img, intention, self.speed)[0]
-                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.5
-                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.5
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
                 elif policy.input_frame == 'MULTI':
                     # convert ros msg -> cv2 
                     # NOTE: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
