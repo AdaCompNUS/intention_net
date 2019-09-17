@@ -66,7 +66,7 @@ class MultiCamPioneerDataset(Dataset):
         
         target = torch.tensor(self.label[fn]).float()
         
-        return [intention,lbnw,mbnw,rbnw,dl,dm,dr],target
+        return [intention,dl,dm,dr,lbnw,mbnw,rbnw],target
     
     def _get_fn(self,fn):
         lbnw_im_path = osp.join(self.data_dir,self.BASE_DIR,self.LEFT_GRAYSCALE_DIR,fn+".jpg")

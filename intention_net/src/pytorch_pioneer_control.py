@@ -8,8 +8,8 @@ import fire
 import string 
 import random
 import numpy as np 
-sys.path.append('/mnt/intention_net')
 sys.path.append('.. ')
+sys.path.append('/mnt/intention_net')
 
 # import local file
 from joy_teleop import JOY_MAPPING
@@ -23,7 +23,8 @@ from nav_msgs.msg import Odometry
 import cv2
 from cv_bridge import CvBridge
 
-from src.utils.undistort import undistort
+import torch
+from utils.undistort import undistort,FRONT_CAMERA_INFO,RIGHT_CAMERA_INFO,LEFT_CAMERA_INFO
 from src.dataset import MultiCamPioneerDataset as Dataset
 from skimage.color import rgb2gray
 
@@ -257,7 +258,9 @@ class Controller(object):
         """
         self._timer.tick()
         if self.key == 'q':
-            sys.exit(-1)
+            #sys.exit(-1)
+            self.intention = 'stop'
+            self.key = ''
         if self.key == 't':
             self.training = not self.training
             self.key = ''
@@ -265,21 +268,20 @@ class Controller(object):
             self.is_manual_intention = not self.is_manual_intention
             self.key = ''
         if self._enable_auto_control:
-            if not self.intention:
+            if self.is_manual_intention:
+                intention = self.manual_intention
+            else:
+                intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+            if not intention:
                     print('estimate pose + goal....')
-            elif self.intention == 'stop':
+            elif intention == 'stop':
                 self.tele_twist.linear.x = 0
                 self.tele_twist.angular.z = 0
             else:
-                if self.is_manual_intention:
-                    intention = self.manual_intention
-                else:
-                    intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
                 print('intention: ',intention)
                 # convert ros msg -> cv2
-                img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8')),(224,224))
-                    
-                pred_control = policy.predict_control(img, intention, self.speed)[0]
+                
+                pred_control = policy(img, intention, self.speed)[0]
                 self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
                 self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
         
@@ -287,11 +289,26 @@ class Controller(object):
         if self.training:
             self._publish_as_trn()
         
-        # self.pub_intention.publish(self.manual_intention)
-
         # publish control
         self.control_pub.publish(self.tele_twist)
     
+    def get_img(self):
+        mrgb = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.right_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(3,224,224))
+        mbnw = rgb2gray(mrgb)
+        rbnw = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),RIGHT_CAMERA_INFO),(224,224))
+        lbnw = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.me3_right,desired_encoding='bgr8'),LEFT_CAMERA_INFO),(224,224))
+        dm = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.depth_img,desired_encoding='bgr8'),(224,224))
+        dr = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me2_depth,desired_encoding='bgr8'),(224,224))
+        dl = cv2.resize(self.bridge.compressed_imgmsg_to_cv2(self.me3_depth,desired_encoding='bgr8'),(224,224))
+
+        #preprocess
+        mbnw = torch.tensor(mbnw).expand(1,1,224,224).float()/255.0
+        rbnw = torch.tensor(rbnw).expand(1,1,224,224).float()/255.0
+        lbnw = torch.tensor(lbnw).expand(1,1,224,224).float()/255.0
+        dm = torch.tensor(dm).expand(1,1,224,224).float()/255.0
+        dr = torch.tensor(dr).expand(1,1,224,224).float()/255.0
+        dl = torch.tensor(dl).expand(1,1,224,224).float()/255.0
+
     def _publish_as_trn(self):
         if self.odom:
             self.pub_trajectory_index.publish(self.trajectory_index)
@@ -322,13 +339,13 @@ class Controller(object):
             self._rate.sleep()
 
 # wrapper for fire to get command arguments
-def run_wrapper(mode='DLM', input_frame='NORMAL', model_dir=None, num_intentions=3, scale_x=1, scale_z=1, rate=10):
+def run_wrapper(mode='DLM', input_frame='NORMAL', model_path=None, num_intentions=3, scale_x=1, scale_z=1, rate=10):
     rospy.init_node("joy_controller")
     controller = Controller(mode, scale_x, scale_z, rate)
-    if model_dir == None:
+    if model_path == None:
         policy = None
     else:    
-        policy = Policy(mode, input_frame, 2, model_dir, num_intentions)
+        policy = torch.load(model_path)
     controller.execute(policy)
 
 def main():

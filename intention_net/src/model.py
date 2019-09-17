@@ -262,7 +262,6 @@ def test():
     intention = torch.tensor([0]).long()
     net = DepthIntentionEncodeModel()
     feat = net(intention,dl,dm,dr,lbnw,mbnw,rbnw)
-    print(feat)
     opt = Adam(net.parameters())
     y = torch.tensor([100,-5]).float()
     criterion = nn.MSELoss()
