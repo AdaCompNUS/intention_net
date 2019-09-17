@@ -81,23 +81,15 @@ def run(train_dir,val_dir=None,learning_rate=1e-4,num_workers=1,num_epochs=100,b
 
     def update_fn(engine, batch):
         model.train()
-        #engine.state.cummulative_loss = 0.0
         optim.zero_grad()
 
         x, y = batch
         x = list(map(lambda x: x.to(device),x))
         y = y.to(device)
-
         y_pred = model(*x)
-       
-        #if engine.state.epoch  % 10:
-        #    print('target',y)
-        #    print('pred',y_pred)
-        
+
         loss = criterion(y_pred, y) 
         loss.backward()
-
-        #engine.state.cummulative_loss += loss
         optim.step()
 
         return loss.item()

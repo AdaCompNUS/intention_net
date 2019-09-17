@@ -76,7 +76,7 @@ def parse_bag(bagfn, intention_type):
     for topic, msg, frame in bag.read_messages(topics=TOPICS):
         if topic in IMG_TOPICS:
             idx = TOPICS_IDX[topic]
-            if topic == '/train/mynteye/left_img/compressed':
+            if topic == '/train/mynteye/right_img/compressed':
                 imgs[idx] = imgmsg_to_cv2(msg,FRONT_CAMERA_INFO)
             elif topic == '/train/mynteye_2/left_img/compressed':
                 imgs[idx] = imgmsg_to_cv2(msg,RIGHT_CAMERA_INFO)
