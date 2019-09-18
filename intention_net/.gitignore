@@ -10,3 +10,4 @@ runs/
 logs/
 test*/
 save_model*
+.vscode/

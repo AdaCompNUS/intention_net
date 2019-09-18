@@ -51,12 +51,7 @@ def id2onehot(indices,n_classes=4):
 def denoise_intention(intentions):
     mapped_intention = np.array(list(map(lambda x: Dataset.INTENTION_MAPPING[x],intentions))).reshape(-1)
     one_hot = id2onehot(mapped_intention,len(Dataset.INTENTION_MAPPING))
-<<<<<<< HEAD
     weighted = one_hot*WEIGHT*POINT_WEIGHT
-=======
-    weighted = one_hot*WEIGHT
-    print(weighted.shape)
->>>>>>> 9ad37c320c327ee563909cd253ee58e49abdcd17
     voted_value = np.sum(weighted,axis=0)
     intention = np.argmax(voted_value)
     return Dataset.INTENTION_MAPPING_NAME[intention]

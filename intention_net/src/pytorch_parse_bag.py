@@ -29,7 +29,7 @@ from utils.undistort import undistort,FRONT_CAMERA_INFO,LEFT_CAMERA_INFO,RIGHT_C
 SENSORS = ['mynt_eye', 'web_cam']
 
 MYNT_EYE = {
-    'RGBS' : ['/train/mynteye/left_img/compressed',\
+    'RGBS' : ['/train/mynteye/right_img/compressed',\
         '/train/mynteye_2/left_img/compressed',\
         '/train/mynteye_3/right_img/compressed'],
     'DEPTHS' : ['/train/mynteye/depth_img/compressed','/train/mynteye_2/depth_img/compressed','/train/mynteye_3/depth_img/compressed'],
@@ -76,7 +76,7 @@ def parse_bag(bagfn, intention_type):
     for topic, msg, frame in bag.read_messages(topics=TOPICS):
         if topic in IMG_TOPICS:
             idx = TOPICS_IDX[topic]
-            if topic == '/train/mynteye/left_img/compressed':
+            if topic == '/train/mynteye/right_img/compressed':
                 imgs[idx] = imgmsg_to_cv2(msg,FRONT_CAMERA_INFO)
             elif topic == '/train/mynteye_2/left_img/compressed':
                 imgs[idx] = imgmsg_to_cv2(msg,RIGHT_CAMERA_INFO)
@@ -114,6 +114,9 @@ def main_wrapper(data_dir='/data', sensor='mynt_eye', intention_type='dlm'):
     if os.path.exists(osp.join(data_dir, gendir)) and os.path.isdir(osp.join(data_dir, gendir)):
         shutil.rmtree(osp.join(data_dir, gendir))
     os.mkdir(osp.join(data_dir, gendir))
+    with open(osp.join(data_dir, gendir,'README.txt'),'w+') as f:
+        f.write('THIS DATA IS PARSED TO SERVE PYTORCH MODEL')
+
     topic_save_path = []
     for idx, rgb_topic in enumerate(RGBS):
         fn = osp.join(data_dir, gendir, f'rgb_{idx}')
