@@ -328,9 +328,9 @@ class IntentionPlanner(object):
 			# self.ahead_idx = get_valid_next_idx(self.ahead_idx)
 			# delta = pu.norm_angle(get_pair_angle(self.current_idx, self.ahead_idx) - current_angle)
 			# intention.data.append(delta)
-		if len(path) > 65:
-			ahead_orientation = get_pair_angle(60,65)
-			turning_angle = pu.norm_angle(get_pair_angle(60,65)-current_angle)
+		if len(path) > 40:
+			ahead_orientation = get_pair_angle(35,40)
+			turning_angle = pu.norm_angle(get_pair_angle(35,40)-current_angle)
 			print("ahead_orientation",ahead_orientation)
 			print("turning_angle",turning_angle)
 

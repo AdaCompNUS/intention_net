@@ -8,7 +8,7 @@ import os
 import math
 import numpy as np
 
-LABEL_PATH = '/media/duong/Data10/duong/data/label.txt'
+LABEL_PATH = '/media/duong/Data10/duong/data/interpolated_data.txt'
 BASE = '/media/duong/Data10/duong/data/denoise_data'
 VALID_KEYS = ['a','l','r','x','n']
 SLIDE_MAX = 100
