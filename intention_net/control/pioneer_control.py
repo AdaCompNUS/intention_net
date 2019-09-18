@@ -90,6 +90,7 @@ class Controller(object):
         self.training = False
         self.scan = None
         self.manual_intention = 'forward'
+        self.is_manual_intention = False
 
         # subscribe ros messages
         rospy.Subscriber('/mynteye/left/image_raw/compressed', CompressedImage, self.cb_left_img, queue_size=1, buff_size=2**10)
@@ -230,8 +231,9 @@ class Controller(object):
         if data.buttons[JOY_MAPPING['buttons']['start']] == 1:
             self.key = 't'
             print('toggle training mode to: %s'%(not self.training))
-            if not self.training:
-                self.trajectory_index = self._random_string(15)
+        # if data.buttons[JOY_MAPPING['buttons']['unkown']] == 1:
+        #     self.key = 'i'
+        #     print('toggle manual intention mode to: %s'%(not self.is_manual_intention))
         if data.buttons[JOY_MAPPING['buttons']['Y']] == 1: 
             self.key = 's'
             print('stop')
@@ -264,6 +266,9 @@ class Controller(object):
         if self.key == 't':
             self.training = not self.training
             self.key = ''
+        if self.key == 'i':
+            self.is_manual_intention = not self.is_manual_intention
+            self.key == ''
         if self.key == 's':
             self._enable_auto_control = False
             self.key = ''
@@ -279,15 +284,19 @@ class Controller(object):
                 self.tele_twist.angular.z = 0
             else:
                 if self._mode == 'DLM':
-                    intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
+                    if self.is_manual_intention:
+                        intention = self.manual_intention
+                    else:
+                        
+                        intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
                     print('intention: ',intention)
                 if policy.input_frame == 'NORMAL': # 1 cam
                     # convert ros msg -> cv2
-                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.left_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(224,224))
+                    img = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.right_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(224,224))
                     
                     pred_control = policy.predict_control(img, intention, self.speed)[0]
-                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL
-                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER
+                    self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
+                    self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
                 elif policy.input_frame == 'MULTI':
                     # convert ros msg -> cv2 
                     # NOTE: Make sure the left camera is launched by mynteye_2.launch and right is run by mynteye_3.launch
