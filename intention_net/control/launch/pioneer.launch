@@ -12,15 +12,15 @@
 
     <!-- LAUNCH MYNTEYE SENSOR -->
     <!-- robot number-->
-    <arg name="robot" type=int default=2/>
+    <arg name="robot" default="2"/>
 
-    <group if="$(eval arg('robot')==1)">
+    <group if="$(eval 'robot'=='1')">
       <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/>
       <include file="/mnt/intention_net/control/launch/mynteye_5.launch"/>
       <include file="/mnt/intention_net/control/launch/mynteye_6.launch"/>
     </group>
 
-    <group if="$(eval arg('robot')==2">
+    <group if="$(eval 'robot'=='2')">
       <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
       <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
       <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
