@@ -11,9 +11,21 @@
     <include file="/mnt/intention_net/control/launch/joy.launch"/>
 
     <!-- LAUNCH MYNTEYE SENSOR -->
-    <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
-    <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
-    <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
+    <!-- robot number-->
+    <arg name="robot" type=int default=2/>
+
+    <group if="$(eval arg('robot')==1)">
+      <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/>
+      <include file="/mnt/intention_net/control/launch/mynteye_5.launch"/>
+      <include file="/mnt/intention_net/control/launch/mynteye_6.launch"/>
+    </group>
+
+    <group if="$(eval arg('robot')==2">
+      <include file="/mnt/intention_net/control/launch/mynteye_1.launch"/>
+      <include file="/mnt/intention_net/control/launch/mynteye_2.launch"/>
+      <include file="/mnt/intention_net/control/launch/mynteye_3.launch"/>
+    </group>
+
     <!-- <include file="/mnt/intention_net/control/launch/mynteye_4.launch"/> -->
     <include file="/mnt/intention_net/control/launch/mynteye.launch"/>
     <include file="/mnt/intention_net/control/launch/ladar.launch"/>

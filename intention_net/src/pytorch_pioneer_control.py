@@ -269,7 +269,7 @@ class Controller(object):
             self.key = ''
         if self._enable_auto_control:
             if self.is_manual_intention:
-                intention = self.manual_intention
+                intention = Dataset.INTENTION_MAPPING[self.manual_intention]
             else:
                 intention = Dataset.INTENTION_MAPPING[self.intention] # map intention str => int
             if not intention:
@@ -280,8 +280,8 @@ class Controller(object):
             else:
                 print('intention: ',intention)
                 # convert ros msg -> cv2
-                
-                pred_control = policy(img, intention, self.speed)[0]
+                inp = self.get_data(intention)
+                pred_control = np.array(policy(*inp))[0]
                 self.tele_twist.linear.x = pred_control[0]*Dataset.SCALE_VEL*0.8
                 self.tele_twist.angular.z = pred_control[1]*Dataset.SCALE_STEER*0.8
         
@@ -292,7 +292,7 @@ class Controller(object):
         # publish control
         self.control_pub.publish(self.tele_twist)
     
-    def get_img(self):
+    def get_data(self,intention):
         mrgb = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.right_img,desired_encoding='bgr8'),FRONT_CAMERA_INFO),(3,224,224))
         mbnw = rgb2gray(mrgb)
         rbnw = cv2.resize(undistort(self.bridge.compressed_imgmsg_to_cv2(self.me2_left,desired_encoding='bgr8'),RIGHT_CAMERA_INFO),(224,224))
@@ -308,6 +308,10 @@ class Controller(object):
         dm = torch.tensor(dm).expand(1,1,224,224).float()/255.0
         dr = torch.tensor(dr).expand(1,1,224,224).float()/255.0
         dl = torch.tensor(dl).expand(1,1,224,224).float()/255.0
+
+        intention = torch.tensor([intention]).long()
+
+        return [intention,dl,dm,dr,lbnw,mbnw,rbnw]
 
     def _publish_as_trn(self):
         if self.odom:

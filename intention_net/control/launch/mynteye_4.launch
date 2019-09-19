@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="mynteye" default="mynteye_4" />
+  <arg name="mynteye" default="mynteye_1" />
 
   <!-- mutiple device -->
   <arg name="is_multiple" default="true" />
 
   <!-- serial_number -->
   <!-- if is_mutiple is true, must set serial_number -->
-  <arg name="serial_number" default="02831E1A00090807" />
+  <arg name="serial_number" default="00D326070009072C" />
+  <!-- <arg name="serial_number" default="02831E1A00090807" /> -->
 
   <!-- depth_type  0: MONO16, 1: TYPE_16UC1 -->
   <arg name="depth_type" default="0" />
@@ -53,7 +54,7 @@
       <!-- node params -->
 
       <param name="is_multiple" value="$(arg is_multiple)" />
-      <param name="serial_number" value="$(arg serial_number)" type="str"/>
+      <param name="serial_number" value="$(arg serial_number)" type="str" />
 
       <param name="depth_type" value="$(arg depth_type)" />
 
