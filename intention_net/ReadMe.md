@@ -35,6 +35,9 @@ Ros is comflict with python3, here we compile the used ros package from source.
 cd ~/catkin_cv
 mkdir src && cd src
 git clone https://github.com/ros-perception/vision_opencv.git
+cd vision_opencv
+git checkout 1.12.8
+
 # resolve link error of python 3 before compile.
 cd /usr/lib/x86_64-linux-gnu/
 sudo ln -s libboost_python-py3x.so libboost_python3.so # replace 'x' with the python3 version in system
